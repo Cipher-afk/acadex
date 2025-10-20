@@ -143,17 +143,14 @@ class Results(Courses):
 
 #Factory Method Implementation
 def table_factory(table_name:str) -> User|Courses|Results|Receipts:
+        table = {
+            "user":User(),
+            "courses":Courses(),
+            "results":Results(),
+            "receipts":Receipts()
+        }
         try:
-            if table_name == "user":
-                return User()
-            elif table_name == "courses":
-                return Courses()
-            elif table_name == "results":
-                return Results()
-            elif table_name == "receipts":
-                return Receipts()
-            else:
-                raise Exception(f"{table_name} is not part of the database")
+            return table[table_name.lower()]
         except Exception as e:
             print(e)    
         
@@ -169,6 +166,7 @@ if __name__ == "__main__":
     print(user.delete_user("users","FUO/23/Csi/22491"))
     print("hey")
     print(courses.get_user_content("courses","FUO/23/Csi/22491"))
+    
 
        
              
