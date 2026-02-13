@@ -1,0 +1,7 @@
+.env
+*.pdf
+*.png
+__init__.py
+.pyc
+__pycache__
+*.db
