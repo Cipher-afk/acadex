@@ -144,6 +144,9 @@ async def download_courses(
         except Exception as e:
             await message.answer("Portal issues please try again")
             print(e)
+        pdf_page = await context.new_page()
+        await pdf_page.goto(page.url)
+        await pdf_page.wait_for_load_state("networkidle", timeout=100000)
         await page.locator("span.selection").nth(0).click()
         print("Clicked selections")
         options = page.locator(".select2-results li")
@@ -169,7 +172,11 @@ async def download_courses(
 
             for j in range(semester_count):
                 if j == 1:  # if second semester click on it
-                    await page.get_by_text(unique_semesters[i]).nth(2).click()
+                    await page.get_by_role("link", name="2nd Semester").click()
+                    print("clicked")
+                    await asyncio.sleep(3)
+                    await page.click("#toggle_search")
+                    print("Toggle clicked")
                 pdf_element = page.locator(".row.d-print-block")
                 print("Found pdf element")
                 original_body = await page.evaluate("document.body.innerHTML")
@@ -177,12 +184,15 @@ async def download_courses(
                 semester = semester.strip()
                 course_name = f"{level}_{semester}_courses"
                 filename = Path(BASE_DIR, f"{level}_{semester}_courses.pdf")
-                element_html = await page.evaluate(
-                    "() => document.querySelector('.row.d-print-block').outerHTML;"
-                )
-                pdf_page = await context.new_page()
-                await pdf_page.goto(page.url)
-                await pdf_page.wait_for_load_state("networkidle")
+                if j != 1:
+                    element_html = await page.evaluate(
+                        "() => document.querySelector('.row.d-print-block').outerHTML;"
+                    )
+                else:
+                    element_html = await page.evaluate(
+                        "() => document.querySelector('#view_second_sem').outerHTML;"
+                    )
+                # pdf_page = await context.new_page()
                 await pdf_page.evaluate(
                     "(html) => {document.body.innerHTML = html}", element_html
                 )
@@ -207,12 +217,12 @@ async def download_courses(
                     caption=course_name,
                 )
                 print("sent document")
-                await pdf_page.close()
                 await page.locator("span.selection").nth(0).click()
                 await options.nth(i).click()
                 print("original body back")
-                documents.append(filename)
+                await pdf_page.evaluate("() => {document.body.innerHTML = ''}")
             await page.locator("span.selection").nth(0).click()
+        await pdf_page.close()
 
 
 async def login(
@@ -234,7 +244,9 @@ async def login(
         await page.click("#btn_login", timeout=100000)
         await message.answer("Credentials entered redirecting to home page..")
         await message.answer("Redirecting...")
-        if await page.locator("#swal2-html-container").is_visible():
+        if await page.get_by_text(
+            "Email and password combination was not found", exact=True
+        ).is_visible():
             await message.answer("Error name and password invalid Try again")
             return False
         else:
@@ -252,7 +264,7 @@ async def main(
     async with async_playwright() as p:
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
         if await get_url() == "":
