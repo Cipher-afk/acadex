@@ -1,10 +1,12 @@
 from redis.asyncio import Redis
 import asyncio
 from config import settings
+from datetime import timedelta
 
 REDIS_PASSWORD = settings.REDIS_PASSWORD
 REDIS_PORT = settings.REDIS_PORT
 REDIS_HOST = settings.REDIS_HOST
+TTL = timedelta(weeks=24).total_seconds()
 
 red = Redis(
     host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, decode_responses=True
@@ -32,16 +34,16 @@ async def get_userinfo(telegram_username: str):
     return user_info
 
 
-async def register_user(telegram_id: str):
-    await red.set(f"paid:{telegram_id}", "false")
+# async def register_user(telegram_id: str):
+#     await red.set(f"paid:{telegram_id}", "false")
 
 
-async def save_payment(telegram_id: str):
-    await red.set(f"paid:{telegram_id}", "true")
+async def save_payment(user_id: str, truth_value: str):
+    await red.set(f"paid:{user_id}", truth_value, ex=TTL)
 
 
-async def get_payment(telegram_id: str):
-    paid = await red.get(f"paid:{telegram_id}")
+async def get_payment(user_id: str):
+    paid = await red.get(f"paid:{user_id}")
     return True if paid == "true" else False
 
 

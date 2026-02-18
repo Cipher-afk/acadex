@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 from aiogram.types import Message, FSInputFile
 from aiogram import Bot
+import os
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -77,6 +78,7 @@ async def download_payment_receipts(
             document=FSInputFile(pdf_filename),
             caption=f"{document_name} downloaded",
         )
+        os.remove(filename)
         # documents.append(pdf_filename)
         # print("Added")
         await page.click('div[aria-label="Close"]')
@@ -85,7 +87,9 @@ async def download_payment_receipts(
     # return documents
 
 
-async def download_results(context: BrowserContext, session_url: str, message: Message):
+async def download_results(
+    context: BrowserContext, session_url: str, message: Message, bot: Bot
+):
     menu, page = await get_menu(session_url=session_url, context=context)
     await menu.get_by_text("Courses", exact=True).click()
     print("Courses clicked")
@@ -94,6 +98,8 @@ async def download_results(context: BrowserContext, session_url: str, message: M
     await page.wait_for_selector(".selection")
     await page.click(".selection")
     options = page.locator("li[role='option']")
+    pdf_page = await context.new_page()
+    await pdf_page.goto(session_url)
     for i in reversed(range(await options.count())):
         await options.nth(i).click()
         await page.wait_for_selector(".highest_gpa")
@@ -103,22 +109,42 @@ async def download_results(context: BrowserContext, session_url: str, message: M
         await page.wait_for_selector(".row.g-9")
         session = await page.locator("p[field='session']").nth(1).inner_text()
         print(session)
-        session_result = await page.locator(".col-12.card.card-custom.p-8.mx-auto")
-        page.add_style_tag(
-            content="""
-        body * {
-                display:none !important
-                    }
-        .col-12.card.card-custom.p-8.mx-auto {
-                display:block !important
-                    }
-"""
+        # session_result = await page.locator(".col-12.card.card-custom.p-8.mx-auto")
+        result_name = f"{session} results"
+        filename = Path(BASE_DIR, result_name)
+        element_html = await page.evaluate(
+            "() => document.querySelector('.col-12.card.card-custom.p-8.mx-auto').outerHTML;"
         )
-        # await session_result.pd
-        # await page.evaluate("window.print = () => {}")
-        await page.pdf(
-            path=f"{session} results.pdf", format="A4", print_background=True
+        # else:
+        #     element_html = await page.evaluate(
+        #         "() => document.querySelector('#view_second_sem').outerHTML;"
+        #     )
+        # pdf_page = await context.new_page()
+        await pdf_page.evaluate(
+            "(html) => {document.body.innerHTML = html}", element_html
         )
+        #             await pdf_page.set_content(
+        #                 f"""
+        #                 <html>
+        #                     <body>
+        #                     {html}
+        #                     </body>
+        #                 </html>
+        # """
+        #             )
+        await pdf_page.pdf(
+            path=filename,
+            format="A4",
+            print_background=True,
+        )
+        print("Got document")
+        await bot.send_document(
+            chat_id=message.chat.id,
+            document=FSInputFile(filename),
+            caption=result_name,
+        )
+        print("sent document")
+        os.remove(filename)
         await page.click("div[data-bs-dismiss='modal']")
         await page.click(".selection")
 
@@ -140,15 +166,21 @@ async def download_courses(
         try:
             documents = []
             await page.wait_for_selector(".card-body.p-6", timeout=1000000)
-            print("Load complete")
+            await message.answer("Courses page finished loading")
         except Exception as e:
             await message.answer("Portal issues please try again")
             print(e)
         pdf_page = await context.new_page()
-        await pdf_page.goto(page.url)
-        await pdf_page.wait_for_load_state("networkidle", timeout=100000)
+        try:
+            await pdf_page.goto(page.url)
+            await pdf_page.wait_for_load_state("networkidle", timeout=100000)
+        except TimeoutError as e:
+            await message.answer("Network Timeout Retry")
+            print(e)
+            return
         await page.locator("span.selection").nth(0).click()
-        print("Clicked selections")
+        await message.answer("Sessions Clicked")
+        await message.answer("Levels Loading....")
         options = page.locator(".select2-results li")
         print(options)
         count = await options.count()
@@ -157,7 +189,8 @@ async def download_courses(
             level = await options.nth(i).inner_text()
             print(level)
             await options.nth(i).click()  # Click levels
-            print("Clicked level")
+            await message.answer(f"{level} session clicked")
+            await message.answer("Courses page loading......")
             await page.click("#toggle_search")  # select printable version
             print("Clicked toggle search")
             semesters = await page.locator(
@@ -177,11 +210,13 @@ async def download_courses(
                     await asyncio.sleep(3)
                     await page.click("#toggle_search")
                     print("Toggle clicked")
+
                 pdf_element = page.locator(".row.d-print-block")
                 print("Found pdf element")
                 original_body = await page.evaluate("document.body.innerHTML")
                 semester = unique_semesters[j]
                 semester = semester.strip()
+                await message.answer(f"{level} {semester} courses downloading......")
                 course_name = f"{level}_{semester}_courses"
                 filename = Path(BASE_DIR, f"{level}_{semester}_courses.pdf")
                 if j != 1:
@@ -217,6 +252,7 @@ async def download_courses(
                     caption=course_name,
                 )
                 print("sent document")
+                os.remove(filename)
                 await page.locator("span.selection").nth(0).click()
                 await options.nth(i).click()
                 print("original body back")
@@ -264,7 +300,7 @@ async def main(
     async with async_playwright() as p:
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
         page = await context.new_page()
         if await get_url() == "":

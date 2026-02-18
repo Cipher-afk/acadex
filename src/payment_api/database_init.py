@@ -1,3 +1,3 @@
 import sqlite3
 
-conn = sqlite3.connect("users_db")
+conn = sqlite3.connect("users_db.db")

@@ -6,7 +6,7 @@ from config import settings
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from utils import hash_password, verify_password
-from redis_config import save_userinfo, get_userinfo, get_payment, register_user
+from redis_config import save_userinfo, get_userinfo, get_payment, save_payment
 from scraper_file import main as scraper_main
 import asyncio
 import httpx
@@ -69,7 +69,7 @@ async def get_level(message: Message, state: FSMContext):
         )
         await message.answer("Credentials Saved you can continue")
         await state.clear()
-        await register_user(message.chat.id)
+        await save_payment(user_id=username, truth_value="false")
     except TelegramNetworkError:
         await message.answer("Check Your Network and try again".title())
 
@@ -80,20 +80,27 @@ async def get_payment_receipts(message: Message, bot: Bot):
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
     level = data["level"]
-    # if not await get_payment(telegram_id=message.chat.id):
-    #     try:
-    #         async with httpx.AsyncClient() as client:
-    #             res = await client.post(
-    #                 "http://127.0.0.1:9000/init-payment",
-    #                 json={"telegram_id": str(telegram_id), "level": level},
-    #             )
-    #             payment_link = res.json()["payment_link"]
-    #     except Exception as e:
-    #         await message.answer("Network Error try again")
-    #         print(e)
-    #     message_ = f"Please procced with your payment here: {payment_link}"
-    #     await bot.send_message(chat_id=message.chat.id, text=message_)
-    # return
+    user_id = data["username"]
+    if not await get_payment(user_id=user_id):
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    "http://127.0.0.1:9000/init-payment",
+                    json={
+                        "user_id": user_id,
+                        "telegram_id": str(telegram_id),
+                        "level": level,
+                    },
+                )
+                payment_link = res.json()["payment_link"]
+                if payment_link is not None:
+                    message_ = f"Please procced with your payment here: {payment_link}"
+                    await bot.send_message(chat_id=message.chat.id, text=message_)
+                    return
+        except Exception as e:
+            await message.answer("Network Error try again")
+            print(e)
+
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
@@ -127,16 +134,26 @@ async def get_courses(message: Message, bot: Bot):
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
     level = data["level"]
-    # if not await get_payment(telegram_id=message.chat.id):
-    #     async with httpx.AsyncClient() as client:
-    #         res = await client.post(
-    #             "http://127.0.0.1:9000/init-payment",
-    #             json={"telegram_id": str(telegram_id), "level": level},
-    #         )
-    #         payment_link = res.json()["payment_link"]
-    #     message_ = f"Please procced with your payment here: {payment_link}"
-    #     await bot.send_message(chat_id=message.chat.id, text=message_)
-    #     return
+    user_id = data["username"]
+    if not await get_payment(user_id=user_id):
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    "http://127.0.0.1:9000/init-payment",
+                    json={
+                        "user_id": user_id,
+                        "telegram_id": str(telegram_id),
+                        "level": level,
+                    },
+                )
+                payment_link = res.json()["payment_link"]
+                if payment_link is not None:
+                    message_ = f"Please procced with your payment here: {payment_link}"
+                    await bot.send_message(chat_id=message.chat.id, text=message_)
+                    return
+        except Exception as e:
+            await message.answer("Network Error try again")
+            print(e)
     username, password = data["username"], data["password"]
     print("Got username")
     await scraper_main(
