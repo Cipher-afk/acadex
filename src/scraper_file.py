@@ -65,7 +65,7 @@ async def download_payment_receipts(
         # await asyncio.sleep(2)
         download = await download_info.value
         await download.path()
-        print(download.suggested_filename)
+        # print(download.suggested_filename)
         # print("Downloaded")
         filename = Path(BASE_DIR, f"{document_name}{download.suggested_filename}")
         pdf_filename = str(filename).replace(".png", ".pdf")

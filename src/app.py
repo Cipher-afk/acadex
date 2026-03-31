@@ -16,6 +16,28 @@ dp = Dispatcher()
 router = Router()
 
 
+async def check_payment(user_id,telegram_id,level,message:Message,bot:Bot):
+    if not await get_payment(user_id=user_id):
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    "http://127.0.0.1:9000/init-payment",
+                    json={
+                        "user_id": user_id,
+                        "telegram_id": str(telegram_id),
+                        "level": level,
+                    },
+                )
+                payment_link = res.json()["payment_link"]
+                if payment_link is not None:
+                    message_ = f"Please procced with your payment here: {payment_link}"
+                    await bot.send_message(chat_id=message.chat.id, text=message_)
+                    return
+        except Exception as e:
+            await message.answer("Network Error try again")
+            print(e)
+
+
 class LoginState(StatesGroup):
     username = State()
     password = State()
@@ -81,26 +103,7 @@ async def get_payment_receipts(message: Message, bot: Bot):
     telegram_id = message.chat.id
     level = data["level"]
     user_id = data["username"]
-    if not await get_payment(user_id=user_id):
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.post(
-                    "http://127.0.0.1:9000/init-payment",
-                    json={
-                        "user_id": user_id,
-                        "telegram_id": str(telegram_id),
-                        "level": level,
-                    },
-                )
-                payment_link = res.json()["payment_link"]
-                if payment_link is not None:
-                    message_ = f"Please procced with your payment here: {payment_link}"
-                    await bot.send_message(chat_id=message.chat.id, text=message_)
-                    return
-        except Exception as e:
-            await message.answer("Network Error try again")
-            print(e)
-
+    await check_payment(user_id=user_id,telegram_id=telegram_id,level=level,message=message,bot=bot)
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
@@ -135,25 +138,7 @@ async def get_courses(message: Message, bot: Bot):
     telegram_id = message.chat.id
     level = data["level"]
     user_id = data["username"]
-    if not await get_payment(user_id=user_id):
-        try:
-            async with httpx.AsyncClient() as client:
-                res = await client.post(
-                    "http://127.0.0.1:9000/init-payment",
-                    json={
-                        "user_id": user_id,
-                        "telegram_id": str(telegram_id),
-                        "level": level,
-                    },
-                )
-                payment_link = res.json()["payment_link"]
-                if payment_link is not None:
-                    message_ = f"Please procced with your payment here: {payment_link}"
-                    await bot.send_message(chat_id=message.chat.id, text=message_)
-                    return
-        except Exception as e:
-            await message.answer("Network Error try again")
-            print(e)
+    await check_payment(user_id=user_id,telegram_id=telegram_id,level=level,message=message,bot=bot)
     username, password = data["username"], data["password"]
     print("Got username")
     await scraper_main(

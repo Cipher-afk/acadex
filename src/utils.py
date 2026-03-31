@@ -13,6 +13,3 @@ def verify_password(password, hashed_password):
     return True if context.verify(password, hashed_password) else False
 
 
-today = datetime.now()
-tomorrow = datetime.now() + timedelta(days=1)
-print(tomorrow > today)
