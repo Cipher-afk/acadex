@@ -6,7 +6,7 @@ from datetime import timedelta
 REDIS_PASSWORD = settings.REDIS_PASSWORD
 REDIS_PORT = settings.REDIS_PORT
 REDIS_HOST = settings.REDIS_HOST
-TTL = timedelta(weeks=24).total_seconds()
+TTL = int(timedelta(weeks=24).total_seconds())
 
 red = Redis(
     host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, decode_responses=True

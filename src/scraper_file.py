@@ -6,6 +6,7 @@ from PIL import Image
 from aiogram.types import Message, FSInputFile
 from aiogram import Bot
 import os
+from tasks import scraping_tasks
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -16,16 +17,16 @@ async def get_menu(session_url: str, context: BrowserContext, message: Message):
     await page.wait_for_selector(
         ".d-inline-flex.text-capitalize.user_text", timeout=80000
     )
-    await message.answer("FUO Home Page Loaded")
+    await message.answer("🏫 FUO Home Page Loaded")
     if await page.locator("#kt_aside_mobile_toggle").is_visible():
         await page.click("#kt_aside_mobile_toggle")
         print("Toggle clicked")
     else:
         await page.wait_for_selector("span.matric_no", timeout=50000)
         mat_num = await page.locator("span.matric_no").inner_text()
-        await message.answer(f"Found Matric Number: {mat_num}")
+        await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
     menu = page.locator("div.menu-item.menu-accordion")
-    await message.answer("Found Side Menu")
+    await message.answer("🤖 Side Menu Clicked")
     return menu, page
 
 
@@ -34,12 +35,12 @@ async def download_payment_receipts(
 ):
     menu, page = await get_menu(session_url, context, message=message)
     await menu.get_by_text("Payments", exact=True).click()
-    await message.answer("Payments Button Clicked")
+    await message.answer("🔍 Looking for your receipts....")
     await menu.get_by_text("Payment Receipts", exact=True).click()
-    await message.answer("Payment Receipts Clicked")
+    # await message.answer("Payment Receipts Clicked")
     await page.wait_for_selector("div.d-flex.py-3.rounded-1.row.mx-0")
     receipts = page.locator("div.d-flex.py-3.rounded-1.row.mx-0")
-    await message.answer("Yaay I Found Your Receipts")
+    await message.answer("🧾 Receipts Found")
     # documents = []
     await message.answer(
         "Downloading......\nThis will take a couple of minutes based on your network speed"
@@ -71,7 +72,7 @@ async def download_payment_receipts(
         pdf_filename = str(filename).replace(".png", ".pdf")
         await download.save_as(filename)
         img = Image.open(filename)
-        img.convert("RGB").save(pdf_filename)
+        img.convert("RGB").save(pdf_filename, format="PDF")
         print("Saved as pdf")
         await bot.send_document(
             chat_id=message.chat.id,
@@ -90,67 +91,110 @@ async def download_payment_receipts(
 async def download_results(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
-    menu, page = await get_menu(session_url=session_url, context=context)
+    menu, page = await get_menu(
+        session_url=session_url, context=context, message=message
+    )
+    await message.answer("📊 Fetching Results....")
     await menu.get_by_text("Courses", exact=True).click()
     print("Courses clicked")
     await menu.get_by_text("View Results", exact=True).click()
     print("View Results clicked")
     await page.wait_for_selector(".selection")
+    await message.answer(f"🔍 Results Found")
     await page.click(".selection")
     options = page.locator("li[role='option']")
+    # options_text = await options.all_inner_texts()
+    # unique_options = list(dict.fromkeys(option.strip() for option in options_text if option != 'Select Session'))
+    options_clicked = list(set([]))
     pdf_page = await context.new_page()
-    await pdf_page.goto(session_url)
-    for i in reversed(range(await options.count())):
-        await options.nth(i).click()
-        await page.wait_for_selector(".highest_gpa")
-        print("Found highest gpa")
-        await page.click("#btnprint_all")
-        print("Clicked button")
-        await page.wait_for_selector(".row.g-9")
-        session = await page.locator("p[field='session']").nth(1).inner_text()
-        print(session)
-        # session_result = await page.locator(".col-12.card.card-custom.p-8.mx-auto")
-        result_name = f"{session} results"
-        filename = Path(BASE_DIR, result_name)
-        element_html = await page.evaluate(
-            "() => document.querySelector('.col-12.card.card-custom.p-8.mx-auto').outerHTML;"
+    await pdf_page.goto(session_url, wait_until="load")
+    for i in reversed(range(1, await options.count())):
+        print(options_clicked)
+        session = await options.nth(i).inner_text()
+        await message.answer(
+            f" 🔎 Found your result for {session} session about to download"
         )
-        # else:
-        #     element_html = await page.evaluate(
-        #         "() => document.querySelector('#view_second_sem').outerHTML;"
-        #     )
-        # pdf_page = await context.new_page()
-        await pdf_page.evaluate(
-            "(html) => {document.body.innerHTML = html}", element_html
-        )
-        #             await pdf_page.set_content(
-        #                 f"""
-        #                 <html>
-        #                     <body>
-        #                     {html}
-        #                     </body>
-        #                 </html>
-        # """
-        #             )
-        await pdf_page.pdf(
-            path=filename,
-            format="A4",
-            print_background=True,
-        )
-        print("Got document")
-        await bot.send_document(
-            chat_id=message.chat.id,
-            document=FSInputFile(filename),
-            caption=result_name,
-        )
-        print("sent document")
-        os.remove(filename)
-        await page.click("div[data-bs-dismiss='modal']")
-        await page.click(".selection")
+        if session not in options_clicked:
+            await options.nth(i).click()
+            await page.wait_for_selector(".highest_gpa")
+            print("Found highest gpa")
+            semesters = page.locator("li.nav-item")
+            semester_count = await semesters.count()
+            print(semester_count)
+            for j in range(1, semester_count):
+                if j <= 2:
+                    current_semester = await semesters.nth(j).inner_text()
+                    if j == 2:
+                        await page.locator(
+                            ".nav-link.link2"
+                        ).click()  # Means click on the second semester
+                        current_semester = "2nd Semester"
+                    await page.click("#btnprint")  # Click the download semester button
+                    print("Clicked button")
+                    await message.answer(
+                        f"Downloading your {current_semester} result..."
+                    )
+                    await page.wait_for_selector(".row.g-9")
+                    # session = await page.locator("p[field='session']").nth(1).inner_text()
+                    session = session.replace("/", r"-")
+
+                    print(session)
+                    # session_result = await page.locator(".col-12.card.card-custom.p-8.mx-auto")
+                    result_name = f"{session} {current_semester.replace(r"\n","").strip()} results.pdf"
+                    filename = Path(BASE_DIR, result_name)
+                    element_html = await page.evaluate(
+                        "() => document.querySelector('#result_body').outerHTML;"  # Get the html of the pdf
+                    )
+                    # else:
+                    #     element_html = await page.evaluate(
+                    #         "() => document.querySelector('#view_second_sem').outerHTML;"
+                    #     )
+                    # pdf_page = await context.new_page()
+                    await pdf_page.evaluate(
+                        "(html) => {document.body.innerHTML = html}",
+                        element_html,  # Include that in your main page
+                    )
+                    #             await pdf_page.set_content(
+                    #                 f"""
+                    #                 <html>
+                    #                     <body>
+                    #                     {html}
+                    #                     </body>
+                    #                 </html>
+                    # """
+                    #             )
+                    await pdf_page.pdf(
+                        path=filename,
+                        format="A4",
+                        print_background=True,
+                    )
+                    print("Got document")
+                    await bot.send_document(
+                        chat_id=message.chat.id,
+                        document=FSInputFile(filename),
+                        caption=result_name,
+                    )
+                    await message.answer(
+                        f"✅ {session} {current_semester} results downloaded successsfully"
+                    )
+                    print("sent document")
+                    os.remove(filename)
+                    options_clicked.append(session)
+                    await page.click("div[data-bs-dismiss='modal']", force=True)
+                    await page.click(".selection")
+                else:
+                    break
+        else:
+            print(session)
+            pass
 
 
 async def download_courses(
-    context: BrowserContext, session_url: str, message: Message, bot: Bot
+    context: BrowserContext,
+    session_url: str,
+    message: Message,
+    bot: Bot,
+    level: int = None,
 ):
     menu, page = await get_menu(
         session_url=session_url, context=context, message=message
@@ -159,16 +203,17 @@ async def download_courses(
     print("Courses clicked")
     await asyncio.sleep(3)
     await menu.get_by_text("View Registered Courses", exact=True).click()
+    await message.answer("📚 Fetching your courses.....")
     print("clicked registered courses")
-    if await page.get_by_text("Sorry, no course found", exact=True).is_visible():
+    if await page.locator("#nocoursefirst").is_visible():
         await message.answer("Register your courses")
     else:
         try:
             documents = []
             await page.wait_for_selector(".card-body.p-6", timeout=1000000)
-            await message.answer("Courses page finished loading")
+            await message.answer("🔍 Found Courses")
         except Exception as e:
-            await message.answer("Portal issues please try again")
+            await message.answer("❌ Portal issues please try again")
             print(e)
         pdf_page = await context.new_page()
         try:
@@ -271,19 +316,19 @@ async def login(
             "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=100000
         )
         print("Page opened")
-        await message.answer("Login Started")
+        await message.answer("🔐 Logging you in...")
         await page.fill("#username", username)
         await page.get_by_text("Continue").click()
         print("continue clicked")
         await page.wait_for_url("https://ecampus.fuotuoke.edu.ng/ecampus/login.html#")
         await page.fill("#password", password)
         await page.click("#btn_login", timeout=100000)
-        await message.answer("Credentials entered redirecting to home page..")
+        await message.answer("🏠 Credentials entered redirecting to home page..")
         await message.answer("Redirecting...")
         if await page.get_by_text(
             "Email and password combination was not found", exact=True
         ).is_visible():
-            await message.answer("Error name and password invalid Try again")
+            await message.answer("❌ Name and password invalid Try again")
             return False
         else:
             # print("redirecting you to home page")
@@ -291,7 +336,8 @@ async def login(
             session_url = page.url
             return session_url
     except TimeoutError:
-        await message.answer("Network Timeout Retry")
+        await message.answer("❌ Network Timeout Retry")
+        return False
 
 
 async def main(
@@ -312,19 +358,36 @@ async def main(
             )
             if session_url is not False:
                 await store_url(session_url)
-                await message.answer("Logged In")
-            if download_info == "payment_receipts":
-                documents = await download_payment_receipts(
-                    session_url=session_url, context=context, message=message, bot=bot
-                )
-            elif download_info == "results":
-                documents = download_results(
-                    context=context, session_url=session_url, message=message
-                )
-            elif download_info == "courses":
-                documents = await download_courses(
-                    context=context, session_url=session_url, message=message, bot=bot
-                )
+                await message.answer("✅ Logged In Successfully")
+            else:
+                return
+            try:
+                if download_info == "payment_receipts":
+                    documents = await download_payment_receipts(
+                        session_url=session_url,
+                        context=context,
+                        message=message,
+                        bot=bot,
+                    )
+                elif download_info == "results":
+                    documents = await download_results(
+                        context=context,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
+                elif download_info == "courses":
+                    documents = await download_courses(
+                        context=context,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
+            except asyncio.CancelledError:
+                await browser.close()
+                raise
+            finally:
+                scraping_tasks.pop(message.chat.id, None)
         await asyncio.sleep(10)
         await browser.close()
 

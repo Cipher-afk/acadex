@@ -1,27 +1,33 @@
-from aiogram import Dispatcher, Bot, Router
+from aiogram import Dispatcher, Bot, Router, F
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from config import settings
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
 from utils import hash_password, verify_password
 from redis_config import save_userinfo, get_userinfo, get_payment, save_payment
 from scraper_file import main as scraper_main
 import asyncio
 import httpx
+import asyncio
+from tasks import scraping_tasks
 
 bot = Bot(settings.BOT_TOKEN)
 dp = Dispatcher()
 router = Router()
+stop_router = Router()
+
+DOMAIN_NAME = settings.DOMAIN_NAME
 
 
-async def check_payment(user_id,telegram_id,level,message:Message,bot:Bot):
+async def payment_verified(user_id, telegram_id, level, message: Message, bot: Bot):
     if not await get_payment(user_id=user_id):
+        timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 res = await client.post(
-                    "http://127.0.0.1:9000/init-payment",
+                    f"{DOMAIN_NAME}/init-payment",
                     json={
                         "user_id": user_id,
                         "telegram_id": str(telegram_id),
@@ -32,7 +38,8 @@ async def check_payment(user_id,telegram_id,level,message:Message,bot:Bot):
                 if payment_link is not None:
                     message_ = f"Please procced with your payment here: {payment_link}"
                     await bot.send_message(chat_id=message.chat.id, text=message_)
-                    return
+                    return False
+                return True
         except Exception as e:
             await message.answer("Network Error try again")
             print(e)
@@ -101,20 +108,31 @@ async def get_payment_receipts(message: Message, bot: Bot):
     telegram_username = message.chat.username
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    level = data["level"]
-    user_id = data["username"]
-    await check_payment(user_id=user_id,telegram_id=telegram_id,level=level,message=message,bot=bot)
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
     try:
-        await scraper_main(
-            username=username,
-            password=password,
-            download_info="payment_receipts",
-            message=message,
-            bot=bot,
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="payment_receipts",
+                message=message,
+                bot=bot,
+            )
         )
+        scraping_tasks[telegram_id] = task
     except TelegramNetworkError:
         await message.answer("Network error try again")
 
@@ -127,8 +145,37 @@ async def get_payment_receipts(message: Message, bot: Bot):
 
 
 @router.message(Command("download_results"))
-async def get_results(message: Message):
-    pass
+async def get_results(message: Message, bot: Bot):
+    telegram_username = message.chat.username
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
+    username, password = data["username"], data["password"]
+    print("Got username")
+    await message.answer("Working....")
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="results",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
 
 
 @router.message(Command("download_courses"))
@@ -136,21 +183,53 @@ async def get_courses(message: Message, bot: Bot):
     telegram_username = message.chat.username
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    level = data["level"]
-    user_id = data["username"]
-    await check_payment(user_id=user_id,telegram_id=telegram_id,level=level,message=message,bot=bot)
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
     username, password = data["username"], data["password"]
     print("Got username")
-    await scraper_main(
-        username=username,
-        password=password,
-        download_info="courses",
-        message=message,
-        bot=bot,
-    )
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="courses",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
+
+
+@stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
+async def stop_scraping(message: Message, state: FSMContext):
+    print("stop triggerred")
+    telegram_id = message.chat.id
+    current_state = await state.get_state()
+    task = scraping_tasks[telegram_id]
+    # if current_state is None:
+    #     await message.answer("Nothing Running")
+    #     return
+    if task:
+        task.cancel()
+        await message.answer("Scraping Stopped")
+    else:
+        await message("No operation running")
+    await state.clear()
 
 
 async def main():
+    dp.include_router(router=stop_router)
     dp.include_router(router=router)
     await dp.start_polling(bot)
 
