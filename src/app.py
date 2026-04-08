@@ -21,7 +21,10 @@ stop_router = Router()
 DOMAIN_NAME = settings.DOMAIN_NAME
 
 
-async def payment_verified(user_id, telegram_id, level, message: Message, bot: Bot):
+async def payment_verified(
+    user_id, telegram_id, level: str, message: Message, bot: Bot
+):
+    message.answer("🤖 Bot loading.....")
     if not await get_payment(user_id=user_id):
         timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
         try:
@@ -31,7 +34,7 @@ async def payment_verified(user_id, telegram_id, level, message: Message, bot: B
                     json={
                         "user_id": user_id,
                         "telegram_id": str(telegram_id),
-                        "level": level,
+                        "level": str(level),
                     },
                 )
                 payment_link = res.json()["payment_link"]
@@ -94,7 +97,7 @@ async def get_level(message: Message, state: FSMContext):
             telegram_username=telegram_username,
             username=username,
             password=password,
-            level=level,
+            level=str(level),
         )
         await message.answer("Credentials Saved you can continue")
         await state.clear()

@@ -4,12 +4,13 @@ import sqlalchemy.dialects.postgresql as pg
 
 
 class User(SQLModel, table=True):
+    __tablename__ = "users"
     telegram_id: str = Field(
         sa_column=Column(pg.VARCHAR, nullable=False, primary_key=True)
     )
     user_id: str
     is_paid: bool = Field(sa_column=Column(pg.BOOLEAN, server_default=text("False")))
-    level: str
+    level: int
     expiry: datetime = Field(
         sa_column=Column(pg.DATE, nullable=True, server_default=None)
     )

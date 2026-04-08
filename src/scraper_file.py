@@ -43,7 +43,7 @@ async def download_payment_receipts(
     await message.answer("🧾 Receipts Found")
     # documents = []
     await message.answer(
-        "Downloading......\nThis will take a couple of minutes based on your network speed"
+        "Downloading......\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
     )
     for i in range(await receipts.count() - 1):
         try:
@@ -131,8 +131,9 @@ async def download_results(
                         current_semester = "2nd Semester"
                     await page.click("#btnprint")  # Click the download semester button
                     print("Clicked button")
+
                     await message.answer(
-                        f"Downloading your {current_semester} result..."
+                        f"Downloading your {current_semester} result...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
                     )
                     await page.wait_for_selector(".row.g-9")
                     # session = await page.locator("p[field='session']").nth(1).inner_text()
@@ -261,7 +262,9 @@ async def download_courses(
                 original_body = await page.evaluate("document.body.innerHTML")
                 semester = unique_semesters[j]
                 semester = semester.strip()
-                await message.answer(f"{level} {semester} courses downloading......")
+                await message.answer(
+                    f"{level} {semester} courses downloading......\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
+                )
                 course_name = f"{level}_{semester}_courses"
                 filename = Path(BASE_DIR, f"{level}_{semester}_courses.pdf")
                 if j != 1:

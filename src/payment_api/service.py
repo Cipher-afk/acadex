@@ -8,7 +8,7 @@ import hmac, hashlib, json
 from redis_config import save_payment
 from aiogram import Bot
 from pprint import pprint
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from redis_config import save_payment
 
 PAYSTACK_SECRET = settings.PAYMENT_SECRET_KEY
@@ -76,7 +76,7 @@ class PaymentService:
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         today = datetime.now()
-        if today > user.expiry or user.is_paid == False:
+        if date.today() > user.expiry or user.is_paid == False:
             user.is_paid = False
             await session.commit()
             await session.refresh(user)
