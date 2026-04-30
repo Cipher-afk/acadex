@@ -26,7 +26,8 @@ All delivered instantly in your Telegram chat.
 4. Sends them back as images/files in chat
 
 ## Demo
-![Acadex Bot Demo]:<img width="478" height="1014" alt="acadex_video_gif" src="https://github.com/user-attachments/assets/0eab58f0-a7be-4d6b-8d21-11f1adb4847e" />
+<img width="478" height="1014" alt="acadex_video_gif" src="https://github.com/user-attachments/assets/c9ae0beb-387f-49d5-8673-0cf13ab0e0bb" />
+
 
 ## Status
 🚀 Live — deployed on Oracle Cloud (ARM)
