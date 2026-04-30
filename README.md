@@ -1,6 +1,6 @@
 # Acadex Bot 🎓
 
-A Telegram bot that lets students access their university portal documents 
+A Telegram bot for Federal University of Otueke, Bayelsa (FUO) students access their university portal documents 
 directly from Telegram — no browser needed.
 
 ## What it does
@@ -8,6 +8,7 @@ Send your portal credentials to the bot, and it fetches your:
 - Exam results
 - Registered courses  
 - Payment receipts
+
 
 All delivered instantly in your Telegram chat.
 
@@ -23,6 +24,9 @@ All delivered instantly in your Telegram chat.
 2. Bot logs into the university portal using Playwright
 3. Fetches requested documents
 4. Sends them back as images/files in chat
+
+## Demo
+![Acadex Bot Demo]:<img width="478" height="1014" alt="acadex_video_gif" src="https://github.com/user-attachments/assets/0eab58f0-a7be-4d6b-8d21-11f1adb4847e" />
 
 ## Status
 🚀 Live — deployed on Oracle Cloud (ARM)
