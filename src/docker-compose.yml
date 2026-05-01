@@ -1,14 +1,31 @@
 version: '3.8' #Create the version
 
 services: #Create the services you want to run together
+  db:
+    image: postgres:15
+    environment: 
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=kudos123
+      - POSTGRES_DB=acadex
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
   backend: #Build them
     build: ./payment_api #Build the docker file from the path
     ports: #Display the ports
       - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
   
   bot:
     build: ./
     depends_on: #This means the api has torun first before the bot
       - backend
+      - db
     environment:
       - DOMAIN_NAME=http://backend:8000 #Api url
+    env_file:
+      - .env
+volumes:
+  postgres_data:
