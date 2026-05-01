@@ -10,3 +10,4 @@ redis==7.4.0
 SQLAlchemy==2.0.49
 sqlmodel==0.0.38
 uvicorn
+asyncpg
