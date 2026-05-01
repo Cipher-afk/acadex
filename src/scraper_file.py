@@ -349,7 +349,13 @@ async def main(
     async with async_playwright() as p:
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True,args=[
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--single-process",
+            "--no-zygote"
+        ])
         context = await browser.new_context()
         page = await context.new_page()
         if await get_url() == "":
