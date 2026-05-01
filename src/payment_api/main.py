@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Header, HTTPException, Depends
-from payment_api.database_config import init_db, get_session
-from payment_api.models import InitPayment
+from .database_config import init_db, get_session
+from .models import InitPayment
 from fastapi.requests import Request
-from payment_api.service import PaymentService
+from .service import PaymentService
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram import Bot
 from config import settings
