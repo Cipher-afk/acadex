@@ -118,10 +118,10 @@ async def get_payment_receipts(message: Message, bot: Bot):
         print(e)
         await message.answer("Please login before downlaoding")
         return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
-        return
+    # if not await payment_verified(
+    #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    # ):
+    #     return
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
