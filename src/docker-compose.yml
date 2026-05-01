@@ -10,9 +10,7 @@ services: #Create the services you want to run together
     volumes: 
       - postgres_data:/var/lib/postgresql/data
   backend: #Build them
-    build:
-    context: .
-    dockerfile: payment_api/Dockerfile #Build the docker file from the path
+    build: ./payment_api #Build the docker file from the path
     ports: #Display the ports
       - "8000:8000"
     depends_on:
