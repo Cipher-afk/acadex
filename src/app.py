@@ -61,7 +61,7 @@ async def start_command(message: Message):
 
 @router.message(Command("help"))
 async def get_help(message: Message):
-    help_message = "/start - Start the bot\n/help - Get info about the bot\n/login - Login to your portal\n/download_receipts - Download Payment Receipts"
+    help_message = "/start - Start the bot\n/help - Get info about the bot\n/login - Login to your portal\n/download_receipts - Download Your Payment Receipts"
     await message.answer(help_message)
 
 
@@ -81,7 +81,7 @@ async def get_username(message: Message, state: FSMContext):
 @router.message(LoginState.password)
 async def get_password(message: Message, state: FSMContext):
     await state.update_data(password=message.text)
-    await message.answer("Enter Current Level: ")
+    await message.answer("Enter Current Level[Just the number]: ")
     await state.set_state(LoginState.level)
 
 
