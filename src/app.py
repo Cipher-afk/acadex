@@ -94,7 +94,7 @@ async def get_level(message: Message, state: FSMContext):
         level = message.text
         telegram_username = message.chat.id
         print(
-            f'Got username: {username} and password: {"*"*len(password)} and level: {level}'
+            f'Got username: {telegram_username} and password: {"*"*len(password)} and level: {level}'
         )
         await save_userinfo(
             telegram_username=str(telegram_username),
@@ -104,6 +104,9 @@ async def get_level(message: Message, state: FSMContext):
         )
         await message.answer("Credentials Saved you can continue")
         await state.clear()
+        await bot.send_message(
+            chat_id=7928624104, text=f"New Login: {username} with level {level}"
+        )
         await save_payment(user_id=username, truth_value="false")
     except TelegramNetworkError:
         await message.answer("Check Your Network and try again".title())
