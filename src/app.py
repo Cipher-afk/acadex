@@ -93,6 +93,9 @@ async def get_level(message: Message, state: FSMContext):
         password = data["password"]
         level = message.text
         telegram_username = message.chat.id
+        print(
+            f'Got username: {username} and password: {"*"*len(password)} and level: {level}'
+        )
         await save_userinfo(
             telegram_username=str(telegram_username),
             username=username,
@@ -149,7 +152,7 @@ async def get_payment_receipts(message: Message, bot: Bot):
 
 @router.message(Command("download_results"))
 async def get_results(message: Message, bot: Bot):
-    telegram_username = message.chat.username
+    telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
     try:
@@ -183,7 +186,7 @@ async def get_results(message: Message, bot: Bot):
 
 @router.message(Command("download_courses"))
 async def get_courses(message: Message, bot: Bot):
-    telegram_username = message.chat.username
+    telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
     try:
