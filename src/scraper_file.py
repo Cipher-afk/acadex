@@ -12,22 +12,26 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 async def get_menu(session_url: str, context: BrowserContext, message: Message):
-    page = await context.new_page()
-    await page.goto(session_url, timeout=100000)
-    await page.wait_for_selector(
-        ".d-inline-flex.text-capitalize.user_text", timeout=80000
-    )
-    await message.answer("🏫 FUO Home Page Loaded")
-    if await page.locator("#kt_aside_mobile_toggle").is_visible():
-        await page.click("#kt_aside_mobile_toggle")
-        print("Toggle clicked")
-    else:
-        await page.wait_for_selector("span.matric_no", timeout=50000)
-        mat_num = await page.locator("span.matric_no").inner_text()
-        await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
-    menu = page.locator("div.menu-item.menu-accordion")
-    await message.answer("🤖 Side Menu Clicked")
-    return menu, page
+    try:
+        page = await context.new_page()
+        await page.goto(session_url, timeout=100000)
+        await page.wait_for_selector(
+            ".d-inline-flex.text-capitalize.user_text", timeout=80000
+        )
+        await message.answer("🏫 FUO Home Page Loaded")
+        if await page.locator("#kt_aside_mobile_toggle").is_visible():
+            await page.click("#kt_aside_mobile_toggle")
+            print("Toggle clicked")
+        else:
+            await page.wait_for_selector("span.matric_no", timeout=50000)
+            mat_num = await page.locator("span.matric_no").inner_text()
+            await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
+        menu = page.locator("div.menu-item.menu-accordion")
+        await message.answer("🤖 Side Menu Clicked")
+        return menu, page
+    except TimeoutError:
+        await message.answer("❌ Network Timeout Retry")
+        return
 
 
 async def download_payment_receipts(
@@ -350,7 +354,7 @@ async def main(
         await message.answer("Scrape started")
         await message.answer("Loading...")
         browser = await p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
@@ -398,6 +402,9 @@ async def main(
             except asyncio.CancelledError:
                 await browser.close()
                 raise
+            except TimeoutError:
+                await message.answer("❌ Network Timeout Retry")
+                return
             finally:
                 scraping_tasks.pop(message.chat.id, None)
         await asyncio.sleep(10)
