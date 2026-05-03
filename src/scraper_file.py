@@ -326,17 +326,17 @@ async def login(
         await page.wait_for_url("https://ecampus.fuotuoke.edu.ng/ecampus/login.html#")
         await page.fill("#password", password)
         await page.click("#btn_login", timeout=100000)
-        await message.answer("🏠 Credentials entered redirecting to home page..")
-        await message.answer("Redirecting...")
-        if await page.get_by_text(
-            "Email and password combination was not found", exact=True
-        ).is_visible():
+        try:
+            await page.wait_for_selector("span.swal2-x-mark", timeout=5000)
             await message.answer("❌ Name and password invalid Try again")
             return False
-        else:
+        except Exception as e:
+            await message.answer("🏠 Credentials entered redirecting to home page..")
+            await message.answer("Redirecting...")
             # print("redirecting you to home page")
             await page.wait_for_selector("span.student_name", timeout=80000)
             session_url = page.url
+            await page.close()
             return session_url
     except TimeoutError:
         await message.answer("❌ Network Timeout Retry")
@@ -349,13 +349,16 @@ async def main(
     async with async_playwright() as p:
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await p.chromium.launch(headless=True,args=[
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--single-process",
-            "--no-zygote"
-        ])
+        browser = await p.chromium.launch(
+            headless=False,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--single-process",
+                "--no-zygote",
+            ],
+        )
         context = await browser.new_context()
         page = await context.new_page()
         if await get_url() == "":
