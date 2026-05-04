@@ -313,6 +313,102 @@ async def download_courses(
         await pdf_page.close()
 
 
+# async def download_biodata(
+#     context: BrowserContext,
+#     session_url: str,
+#     message: Message,
+#     bot: Bot,
+# ):
+#     menu, page = await get_menu(
+#         session_url=session_url, context=context, message=message
+#     )
+#     await message.answer("Fetching your biodata...")
+#     await menu.get_by_text("Details", exact=True).click()
+#     await menu.get_by_text("My details", exact=True).click()
+#     await message.answer("Biodata page loading...")
+#     pdf_page = await context.new_page()
+#     # await pdf_page.goto(page.url)
+#     await pdf_page.wait_for_load_state("networkidle")
+#     await message.answer(
+#         "Biodata page loaded\nDownloading your biodata...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
+#     )
+#     try:
+#         await page.wait_for_selector("#my_details")
+#         print("selector found")
+#         await asyncio.sleep(10)
+#         element_html = await page.evaluate("""  ()=>{
+#           const head = document.head.outerHtml;
+#           const html = document.querySelector("#my_details")?.outerHTML ?? null;
+#           return `<html><head>${head}</head><body>${html}</body></html>`}
+#           """)
+#         # print(element_html)
+
+#         if not element_html:
+#             await message.answer(
+#                 "❌ Unable to find biodata on the page. Please try again later."
+#             )
+#         filename = Path(BASE_DIR, "biodata.pdf")
+#         print(filename)
+#         # await pdf_page.evaluate(
+#         #     "(html) => {document.body.innerHTML = html}", element_html
+#         # )
+#         await pdf_page.set_content(element_html)
+
+#         print("PDF page content set")
+#         await asyncio.sleep(3)
+#         print("slept")
+#         await pdf_page.pdf(path=filename, format="A4", print_background=True)
+#         print("pdf page gotten")
+#         await bot.send_document(
+#             chat_id=message.chat.id, document=FSInputFile(filename), caption="Biodata"
+#         )
+#         os.remove(filename)
+#     except Exception as e:
+#         await message.answer(f"Error{e}")
+#         raise
+
+
+async def download_admmission_forms(
+    context: BrowserContext, session_url: str, message: Message, bot: Bot
+):
+    menu, page = await get_menu(
+        context=context, session_url=session_url, message=message
+    )
+    await menu.get_by_text("Details", exact=True).click()
+    await menu.get_by_text("Registration Documents", exact=True).click()
+    await message.answer("Registration Documents Pages Loading.....")
+    await page.wait_for_selector(".text-secondary.fw-bolder.fs-5")
+    document_names = page.locator(".text-secondary.fw-bolder.fs-5")
+    # document_downloads = page.locator(
+    #     "bi.bi-download.text-secondary.fw-bold.acceptance_form_download"
+    # )
+
+    await message.answer(
+        "Registration Documents Page Loaded\nDownloading your documents...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
+    )
+    try:
+        for i in range(len(await document_names.all_inner_texts())):
+            document_name = await document_names.nth(i).inner_text()
+            print(document_name)
+            download_btn = page.locator(
+                f"i[data-tile='{document_name.strip().lower().replace(' ', '_')}']"
+            )
+            async with page.expect_download() as download_info:
+                await download_btn.click()
+            download = await download_info.value
+            await download.path()
+            file_name = Path(BASE_DIR, f"{download.suggested_filename}")
+            await download.save_as(file_name)
+            await bot.send_document(
+                chat_id=message.chat.id,
+                document=FSInputFile(file_name),
+                caption=f"{document_name} downloaded successfully",
+            )
+    except Exception as e:
+        await message.answer(f"Error occured while getting documents try again")
+        raise
+
+
 async def login(
     context: BrowserContext, username: str, password: str, message: Message
 ):
@@ -399,6 +495,23 @@ async def main(
                         message=message,
                         bot=bot,
                     )
+
+                # elif download_info == "biodata":
+                #     await download_biodata(
+                #         context=context,
+                #         session_url=session_url,
+                #         message=message,
+                #         bot=bot,
+                #     )
+                #     print("Done")
+
+                elif download_info == "registration_documents":
+                    await download_admmission_forms(
+                        context=context,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
             except asyncio.CancelledError:
                 await browser.close()
                 raise
@@ -408,6 +521,7 @@ async def main(
             finally:
                 scraping_tasks.pop(message.chat.id, None)
         await asyncio.sleep(10)
+        print("Browser closing")
         await browser.close()
 
 
