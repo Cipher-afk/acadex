@@ -220,18 +220,6 @@ async def get_courses(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@router.message(F.text)
-async def handle_unknown(message: Message):
-    await message.answer("Unknown Command. Please use /help to see available commands.")
-
-
-@router.message(F.photo)
-async def handle_photo(message: Message):
-    await message.answer(
-        "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
-    )
-
-
 # @router.message(Command("download_biodata"))
 # async def get_biodata(message: Message, bot: Bot):
 #     telegram_username = message.chat.id
@@ -296,6 +284,18 @@ async def get_admission_forms(message: Message, bot: Bot):
         scraping_tasks[telegram_id] = task
     except TelegramNetworkError:
         await message.answer("Network error try again")
+
+
+@router.message(not F.text.startswith("/"))
+async def handle_unknown(message: Message):
+    await message.answer("Unknown Command. Please use /help to see available commands.")
+
+
+@router.message(F.photo)
+async def handle_photo(message: Message):
+    await message.answer(
+        "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
+    )
 
 
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
