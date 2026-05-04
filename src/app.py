@@ -265,8 +265,8 @@ async def handle_photo(message: Message):
 #         await message.answer("Network error try again")
 
 
-@router.message(Command("download_registration_documents"))
-async def get_registration_documents(message: Message, bot: Bot):
+@router.message(Command("download_admission_forms"))
+async def get_admission_forms(message: Message, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -277,9 +277,9 @@ async def get_registration_documents(message: Message, bot: Bot):
         print(e)
         await message.answer("Please login before downlaoding")
         return
-        # if not await payment_verified(
-        #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-        # ):
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
         return
     username, password = data["username"], data["password"]
     print("Got username")
@@ -288,7 +288,7 @@ async def get_registration_documents(message: Message, bot: Bot):
             scraper_main(
                 username=username,
                 password=password,
-                download_info="registration_documents",
+                download_info="admission_forms",
                 message=message,
                 bot=bot,
             )

@@ -505,7 +505,7 @@ async def main(
                 #     )
                 #     print("Done")
 
-                elif download_info == "registration_documents":
+                elif download_info == "admission_forms":
                     await download_admmission_forms(
                         context=context,
                         session_url=session_url,
