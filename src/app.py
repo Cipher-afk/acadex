@@ -220,6 +220,84 @@ async def get_courses(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
+@router.message(F.text)
+async def handle_unknown(message: Message):
+    await message.answer("Unknown Command. Please use /help to see available commands.")
+
+
+@router.message(F.photo)
+async def handle_photo(message: Message):
+    await message.answer(
+        "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
+    )
+
+
+# @router.message(Command("download_biodata"))
+# async def get_biodata(message: Message, bot: Bot):
+#     telegram_username = message.chat.id
+#     data = await get_userinfo(telegram_username)
+#     telegram_id = message.chat.id
+#     try:
+#         level = data["level"]
+#         user_id = data["username"]
+#     except KeyError as e:
+#         print(e)
+#         await message.answer("Please login before downlaoding")
+#         return
+#     # if not await payment_verified(
+#     #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+#     # ):
+#     #     return
+#     username, password = data["username"], data["password"]
+#     print("Got username")
+#     try:
+#         task = asyncio.create_task(
+#             scraper_main(
+#                 username=username,
+#                 password=password,
+#                 download_info="biodata",
+#                 message=message,
+#                 bot=bot,
+#             )
+#         )
+#         scraping_tasks[telegram_id] = task
+#     except TelegramNetworkError:
+#         await message.answer("Network error try again")
+
+
+@router.message(Command("download_registration_documents"))
+async def get_registration_documents(message: Message, bot: Bot):
+    telegram_username = message.chat.id
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+        # if not await payment_verified(
+        #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+        # ):
+        return
+    username, password = data["username"], data["password"]
+    print("Got username")
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="registration_documents",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
+
+
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
 async def stop_scraping(message: Message, state: FSMContext):
     print("stop triggerred")
