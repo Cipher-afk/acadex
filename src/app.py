@@ -265,7 +265,7 @@ async def handle_photo(message: Message):
 #         await message.answer("Network error try again")
 
 
-@router.message(Command("download_admission_forms"))
+@router.message(Command("download_forms"))
 async def get_admission_forms(message: Message, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
