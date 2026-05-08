@@ -404,6 +404,7 @@ async def download_admmission_forms(
                 document=FSInputFile(file_name),
                 caption=f"{document_name} downloaded successfully",
             )
+            os.remove(file_name)
     except Exception as e:
         await message.answer(f"Error occured while getting documents try again")
         raise

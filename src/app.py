@@ -286,12 +286,12 @@ async def get_admission_forms(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@router.message(not F.text.startswith("/"))
+@stop_router.message(not F.text.startswith("/"))
 async def handle_unknown(message: Message):
     await message.answer("Unknown Command. Please use /help to see available commands.")
 
 
-@router.message(F.photo)
+@stop_router.message(F.photo)
 async def handle_photo(message: Message):
     await message.answer(
         "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
