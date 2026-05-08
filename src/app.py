@@ -286,7 +286,7 @@ async def get_admission_forms(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@stop_router.message(not F.text.startswith("/"))
+@stop_router.message(~F.text.startswith("/"))
 async def handle_unknown(message: Message):
     await message.answer("Unknown Command. Please use /help to see available commands.")
 
