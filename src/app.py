@@ -286,18 +286,6 @@ async def get_admission_forms(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@stop_router.message(~F.text.startswith("/"))
-async def handle_unknown(message: Message):
-    await message.answer("Unknown Command. Please use /help to see available commands.")
-
-
-@stop_router.message(F.photo)
-async def handle_photo(message: Message):
-    await message.answer(
-        "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
-    )
-
-
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
 async def stop_scraping(message: Message, state: FSMContext):
     print("stop triggerred")
@@ -313,6 +301,18 @@ async def stop_scraping(message: Message, state: FSMContext):
     else:
         await message("No operation running")
     await state.clear()
+
+
+@stop_router.message(~F.text.startswith("/"))
+async def handle_unknown(message: Message):
+    await message.answer("Unknown Command. Please use /help to see available commands.")
+
+
+@stop_router.message(F.photo)
+async def handle_photo(message: Message):
+    await message.answer(
+        "Photo received. Currently, I cannot process photos actually i don't need photos 🙂."
+    )
 
 
 async def main():
