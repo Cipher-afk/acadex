@@ -39,7 +39,7 @@ async def payment_verified(
                 )
                 payment_link = res.json()["payment_link"]
                 if payment_link is not None:
-                    message_ = f"Please procced with your payment here: {payment_link}"
+                    message_ = f"Please procced with your payment of 500 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
                     await bot.send_message(chat_id=message.chat.id, text=message_)
                     return False
                 return True
@@ -124,10 +124,10 @@ async def get_payment_receipts(message: Message, bot: Bot):
         print(e)
         await message.answer("Please login before downlaoding")
         return
-    # if not await payment_verified(
-    #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    # ):
-    #     return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
