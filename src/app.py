@@ -303,11 +303,6 @@ async def stop_scraping(message: Message, state: FSMContext):
     await state.clear()
 
 
-@stop_router.message(~F.text.startswith("/"))
-async def handle_unknown(message: Message):
-    await message.answer("Unknown Command. Please use /help to see available commands.")
-
-
 @stop_router.message(F.photo)
 async def handle_photo(message: Message):
     await message.answer(
