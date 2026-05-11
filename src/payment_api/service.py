@@ -71,7 +71,7 @@ class PaymentService:
         await session.commit()
         return {"Update": "Successful"}
 
-    async def get_user_by_telegram_id(telegram_id: str, session):
+    async def get_user_by_telegram_id(self, telegram_id: str, session):
         result = await session.execute(
             select(User).where(telegram_id == User.telegram_id)
         )
