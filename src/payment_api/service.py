@@ -60,14 +60,22 @@ class PaymentService:
         user = result.scalars().first()
         return user
 
-    async def update_info(self, user_id: str, info: dict, session: AsyncSession):
-        user = await self.get_user(user_id=user_id, session=session)
+    async def update_info(self, telegram_id: str, info: dict, session: AsyncSession):
+        user = await self.get_user_by_telegram_id(
+            telegram_id=telegram_id, session=session
+        )
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         for k, v in info.items():
             setattr(user, k, v)
         await session.commit()
         return {"Update": "Successful"}
+
+    async def get_user_by_telegram_id(telegram_id: str, session):
+        result = await session.execute(
+            select(User).where(telegram_id == User.telegram_id)
+        )
+        return result.scalars().first()
 
     async def payment_expired(
         self, user_id: str, telegram_id: str, session: AsyncSession

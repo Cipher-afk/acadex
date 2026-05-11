@@ -32,9 +32,18 @@ async def check_health():
 async def initialize_payment(
     payload: InitPayment, session: AsyncSession = Depends(get_session)
 ):
-    user = await service.get_user(user_id=payload.user_id, session=session)
-    if user is None:
+    user = await service.get_user_by_telegram_id(
+        telegram_id=payload.telegram_id, session=session
+    )
+    user_id = await service.get_user(user_id=payload.user_id, session=session)
+    if user is None and user_id is None:
         user = await service.create_user(user_info=payload, session=session)
+    else:
+        await service.update_info(
+            telegram_id=user.telegram_id,
+            info={"user_id": payload.user_id, "level": payload.level},
+            session=session,
+        )
     if (
         await service.payment_expired(
             user_id=user.user_id, telegram_id=user.telegram_id, session=session
