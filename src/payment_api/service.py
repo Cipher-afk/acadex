@@ -46,7 +46,7 @@ class PaymentService:
                 await bot.send_message(chat_id=int(telegram_id), text="Payment Failed")
                 return {"status": "ignored"}
             await self.update_info(
-                user_id=user_id, info={"is_paid": True}, session=session
+                telegram_id=telegram_id, info={"is_paid": True}, session=session
             )
             await save_payment(user_id=user_id, truth_value="truth")
             await bot.send_message(
