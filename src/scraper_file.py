@@ -459,8 +459,10 @@ async def login(
         await page.fill("#password", password)
         await message.answer("Password entered")
         await page.click("#btn_login", timeout=10000000)
+        await message.answer("Logging in...")
         try:
-            await page.wait_for_selector("span.swal2-x-mark", timeout=500000)
+            await message.answer("Checking credentials...")
+            await page.wait_for_selector("span.swal2-x-mark", timeout=5000000000)
             await message.answer("❌ Name and password invalid Try again")
             return False
         except Exception as e:
