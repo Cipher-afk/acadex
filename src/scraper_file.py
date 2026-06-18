@@ -438,45 +438,47 @@ async def login(
     context: BrowserContext, username: str, password: str, message: Message
 ):
     # await message.answer("Login Started")
-    # while True:
-    try:
-        page = await context.new_page()
-        await page.goto(
-            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=100000
-        )
-        print("Page opened")
-        await message.answer("🔐 Logging you in...")
-        await page.fill("#username", username)
-        await message.answer("Username entered")
-        await page.get_by_text("Continue").click()
-        print("continue clicked")
-        await message.answer("Password page loading...")
-        await page.wait_for_url(
-            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
-            wait_until="domcontentloaded",
-            timeout=800000,
-        )
-        await page.fill("#password", password)
-        await message.answer("Password entered")
-        await page.click("#btn_login", timeout=100000)
-        await message.answer("Logging in...")
+    while True:
         try:
-            await message.answer("Checking credentials...")
-            await page.wait_for_selector("span.swal2-x-mark", timeout=100000)
-            await message.answer("❌ Name and password invalid Try again")
-            return False
-        except Exception as e:
-            await message.answer("🏠 Credentials entered redirecting to home page..")
-            await message.answer("Redirecting...")
-            # print("redirecting you to home page")
-            await page.wait_for_selector("span.student_name", timeout=800000)
-            session_url = page.url
+            page = await context.new_page()
+            await page.goto(
+                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=800000
+            )
+            print("Page opened")
+            await message.answer("🔐 Logging you in...")
+            await page.fill("#username", username)
+            await message.answer("Username entered")
+            await page.get_by_text("Continue").click()
+            print("continue clicked")
+            await message.answer("Password page loading...")
+            await page.wait_for_url(
+                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
+                wait_until="domcontentloaded",
+                timeout=800000,
+            )
+            await page.fill("#password", password)
+            await message.answer("Password entered")
+            await page.click("#btn_login", timeout=100000)
+            await message.answer("Logging in...")
+            try:
+                await message.answer("Checking credentials...")
+                await page.wait_for_selector("span.swal2-x-mark", timeout=100000)
+                await message.answer("❌ Name and password invalid Try again")
+                return False
+            except Exception as e:
+                await message.answer(
+                    "🏠 Credentials entered redirecting to home page.."
+                )
+                await message.answer("Redirecting...")
+                # print("redirecting you to home page")
+                await page.wait_for_selector("span.student_name", timeout=800000)
+                session_url = page.url
+                await page.close()
+                return session_url
+        except TimeoutError:
+            await message.answer("❌ Network Timeout Retrying....")
             await page.close()
-            return session_url
-    except TimeoutError:
-        await message.answer("❌ Network Timeout Retrying....")
-        await page.close()
-        # continue
+            continue
 
 
 async def main(
