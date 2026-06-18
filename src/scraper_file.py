@@ -12,35 +12,37 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 async def get_menu(session_url: str, context: BrowserContext, message: Message):
-    try:
-        page = await context.new_page()
-        await page.goto(session_url, timeout=100000)
-        await page.wait_for_selector(
-            ".d-inline-flex.text-capitalize.user_text", timeout=80000
-        )
-        await message.answer("🏫 FUO Home Page Loaded")
-        if await page.locator("#kt_aside_mobile_toggle").is_visible():
-            await page.click("#kt_aside_mobile_toggle")
-            print("Toggle clicked")
-        else:
-            await page.wait_for_selector("span.matric_no", timeout=50000)
-            mat_num = await page.locator("span.matric_no").inner_text()
-            await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
-        menu = page.locator("div.menu-item.menu-accordion")
-        await message.answer("🤖 Side Menu Clicked")
-        return menu, page
-    except TimeoutError:
-        await message.answer("❌ Network Timeout Retry")
-        return
+    while True:
+        try:
+            page = await context.new_page()
+            await page.goto(session_url, timeout=10000000)
+            await page.wait_for_selector(
+                ".d-inline-flex.text-capitalize.user_text", timeout=8000000
+            )
+            await message.answer("🏫 FUO Home Page Loaded")
+            if await page.locator("#kt_aside_mobile_toggle").is_visible():
+                await page.click("#kt_aside_mobile_toggle")
+                print("Toggle clicked")
+            else:
+                await page.wait_for_selector("span.matric_no", timeout=5000000)
+                mat_num = await page.locator("span.matric_no").inner_text()
+                await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
+            menu = page.locator("div.menu-item.menu-accordion")
+            await message.answer("🤖 Side Menu Clicked")
+            return menu, page
+        except TimeoutError:
+            await message.answer("❌ Network Timeout Retrying...")
+            await page.close()
+            continue
 
 
 async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
     menu, page = await get_menu(session_url, context, message=message)
-    await menu.get_by_text("Payments", exact=True).click()
+    await menu.get_by_text("Payments", exact=True).click(timeout=1000000)
     await message.answer("🔍 Looking for your receipts....")
-    await menu.get_by_text("Payment Receipts", exact=True).click()
+    await menu.get_by_text("Payment Receipts", exact=True).click(timeout=1000000)
     # await message.answer("Payment Receipts Clicked")
     await page.wait_for_selector("div.d-flex.py-3.rounded-1.row.mx-0")
     receipts = page.locator("div.d-flex.py-3.rounded-1.row.mx-0")
@@ -99,32 +101,54 @@ async def download_results(
         session_url=session_url, context=context, message=message
     )
     await message.answer("📊 Fetching Results....")
-    await menu.get_by_text("Courses", exact=True).click()
-    print("Courses clicked")
-    await menu.get_by_text("View Results", exact=True).click()
-    print("View Results clicked")
-    await page.wait_for_selector(".selection")
-    await message.answer(f"🔍 Results Found")
-    await page.click(".selection")
-    options = page.locator("li[role='option']")
+    while True:
+        try:
+            await menu.get_by_text("Courses", exact=True).click(timeout=1000000)
+            print("Courses clicked")
+            await menu.get_by_text("View Results", exact=True).click(timeout=1000000)
+            print("View Results clicked")
+            await page.wait_for_selector(".selection", timeout=1000000)
+            await message.answer(f"🔍 Results Found")
+            await page.click(".selection")
+            await page.wait_for_selector("li[role='option']", timeout=1000000)
+            options = page.locator("li[role='option']")
+            if options.count() <= 1:
+                await message.answer(
+                    "Page not loaded properly due to website issues 💀 Retrying now..."
+                )
+                continue
+            else:
+                break
+        except TimeoutError:
+            await message.answer("❌ Network Timeout Retrying...")
+            continue
+
     # options_text = await options.all_inner_texts()
     # unique_options = list(dict.fromkeys(option.strip() for option in options_text if option != 'Select Session'))
     options_clicked = list(set([]))
     pdf_page = await context.new_page()
-    await pdf_page.goto(session_url, wait_until="load")
+    await pdf_page.goto(session_url, wait_until="domcontentloaded")
     for i in reversed(range(1, await options.count())):
         print(options_clicked)
-        session = await options.nth(i).inner_text()
+        session = await options.nth(i).inner_text(timeout=1000000)
         await message.answer(
             f" 🔎 Found your result for {session} session about to download"
         )
         if session not in options_clicked:
             await options.nth(i).click()
-            await page.wait_for_selector(".highest_gpa")
-            print("Found highest gpa")
-            semesters = page.locator("li.nav-item")
-            semester_count = await semesters.count()
-            print(semester_count)
+            while True:
+                try:
+                    await page.wait_for_selector(".highest_gpa", timeout=1000000)
+                    print("Found highest gpa")
+                    semesters = page.locator("li.nav-item")
+                    semester_count = await semesters.count()
+                    print(semester_count)
+                    break
+                except TimeoutError:
+                    await message.answer(
+                        "Page not loaded properly due to website issues 💀 Retrying now..."
+                    )
+                    continue
             for j in range(1, semester_count):
                 if j <= 2:
                     current_semester = await semesters.nth(j).inner_text()
@@ -139,7 +163,7 @@ async def download_results(
                     await message.answer(
                         f"Downloading your {current_semester} result...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
                     )
-                    await page.wait_for_selector(".row.g-9")
+                    await page.wait_for_selector(".row.g-9", timeout=1000000)
                     # session = await page.locator("p[field='session']").nth(1).inner_text()
                     session = session.replace("/", r"-")
 
@@ -414,34 +438,40 @@ async def login(
     context: BrowserContext, username: str, password: str, message: Message
 ):
     # await message.answer("Login Started")
-    try:
-        page = await context.new_page()
-        await page.goto(
-            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=100000
-        )
-        print("Page opened")
-        await message.answer("🔐 Logging you in...")
-        await page.fill("#username", username)
-        await page.get_by_text("Continue").click()
-        print("continue clicked")
-        await page.wait_for_url("https://ecampus.fuotuoke.edu.ng/ecampus/login.html#")
-        await page.fill("#password", password)
-        await page.click("#btn_login", timeout=100000)
+    while True:
         try:
-            await page.wait_for_selector("span.swal2-x-mark", timeout=5000)
-            await message.answer("❌ Name and password invalid Try again")
-            return False
-        except Exception as e:
-            await message.answer("🏠 Credentials entered redirecting to home page..")
-            await message.answer("Redirecting...")
-            # print("redirecting you to home page")
-            await page.wait_for_selector("span.student_name", timeout=80000)
-            session_url = page.url
+            page = await context.new_page()
+            await page.goto(
+                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=10000000
+            )
+            print("Page opened")
+            await message.answer("🔐 Logging you in...")
+            await page.fill("#username", username)
+            await page.get_by_text("Continue").click()
+            print("continue clicked")
+            await page.wait_for_url(
+                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#"
+            )
+            await page.fill("#password", password)
+            await page.click("#btn_login", timeout=10000000)
+            try:
+                await page.wait_for_selector("span.swal2-x-mark", timeout=500000)
+                await message.answer("❌ Name and password invalid Try again")
+                return False
+            except Exception as e:
+                await message.answer(
+                    "🏠 Credentials entered redirecting to home page.."
+                )
+                await message.answer("Redirecting...")
+                # print("redirecting you to home page")
+                await page.wait_for_selector("span.student_name", timeout=8000000)
+                session_url = page.url
+                await page.close()
+                return session_url
+        except TimeoutError:
+            await message.answer("❌ Network Timeout Retrying....")
             await page.close()
-            return session_url
-    except TimeoutError:
-        await message.answer("❌ Network Timeout Retry")
-        return False
+            continue
 
 
 async def main(
