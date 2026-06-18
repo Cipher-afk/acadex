@@ -447,14 +447,17 @@ async def login(
         print("Page opened")
         await message.answer("🔐 Logging you in...")
         await page.fill("#username", username)
+        await message.answer("Username entered")
         await page.get_by_text("Continue").click()
         print("continue clicked")
+        await message.answer("Password page loading...")
         await page.wait_for_url(
             "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
             wait_until="domcontentloaded",
             timeout=10000000,
         )
         await page.fill("#password", password)
+        await message.answer("Password entered")
         await page.click("#btn_login", timeout=10000000)
         try:
             await page.wait_for_selector("span.swal2-x-mark", timeout=500000)
