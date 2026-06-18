@@ -15,7 +15,7 @@ async def get_menu(session_url: str, context: BrowserContext, message: Message):
     while True:
         try:
             page = await context.new_page()
-            await page.goto(session_url, timeout=10000000)
+            await page.goto(session_url, timeout=8000000)
             await page.wait_for_selector(
                 ".d-inline-flex.text-capitalize.user_text", timeout=8000000
             )
@@ -40,9 +40,9 @@ async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
     menu, page = await get_menu(session_url, context, message=message)
-    await menu.get_by_text("Payments", exact=True).click(timeout=1000000)
+    await menu.get_by_text("Payments", exact=True).click(timeout=800000)
     await message.answer("🔍 Looking for your receipts....")
-    await menu.get_by_text("Payment Receipts", exact=True).click(timeout=1000000)
+    await menu.get_by_text("Payment Receipts", exact=True).click(timeout=800000)
     # await message.answer("Payment Receipts Clicked")
     await page.wait_for_selector("div.d-flex.py-3.rounded-1.row.mx-0")
     receipts = page.locator("div.d-flex.py-3.rounded-1.row.mx-0")
@@ -103,14 +103,14 @@ async def download_results(
     await message.answer("📊 Fetching Results....")
     while True:
         try:
-            await menu.get_by_text("Courses", exact=True).click(timeout=1000000)
+            await menu.get_by_text("Courses", exact=True).click(timeout=800000)
             print("Courses clicked")
-            await menu.get_by_text("View Results", exact=True).click(timeout=1000000)
+            await menu.get_by_text("View Results", exact=True).click(timeout=800000)
             print("View Results clicked")
-            await page.wait_for_selector(".selection", timeout=1000000)
+            await page.wait_for_selector(".selection", timeout=800000)
             await message.answer(f"🔍 Results Found")
             await page.click(".selection")
-            await page.wait_for_selector("li[role='option']", timeout=1000000)
+            await page.wait_for_selector("li[role='option']", timeout=800000)
             options = page.locator("li[role='option']")
             if options.count() <= 1:
                 await message.answer(
@@ -130,7 +130,7 @@ async def download_results(
     await pdf_page.goto(session_url, wait_until="domcontentloaded")
     for i in reversed(range(1, await options.count())):
         print(options_clicked)
-        session = await options.nth(i).inner_text(timeout=1000000)
+        session = await options.nth(i).inner_text(timeout=800000)
         await message.answer(
             f" 🔎 Found your result for {session} session about to download"
         )
@@ -138,7 +138,7 @@ async def download_results(
             await options.nth(i).click()
             while True:
                 try:
-                    await page.wait_for_selector(".highest_gpa", timeout=1000000)
+                    await page.wait_for_selector(".highest_gpa", timeout=800000)
                     print("Found highest gpa")
                     semesters = page.locator("li.nav-item")
                     semester_count = await semesters.count()
@@ -163,7 +163,7 @@ async def download_results(
                     await message.answer(
                         f"Downloading your {current_semester} result...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
                     )
-                    await page.wait_for_selector(".row.g-9", timeout=1000000)
+                    await page.wait_for_selector(".row.g-9", timeout=800000)
                     # session = await page.locator("p[field='session']").nth(1).inner_text()
                     session = session.replace("/", r"-")
 
@@ -239,7 +239,7 @@ async def download_courses(
     else:
         try:
             documents = []
-            await page.wait_for_selector(".card-body.p-6", timeout=1000000)
+            await page.wait_for_selector(".card-body.p-6", timeout=800000)
             await message.answer("🔍 Found Courses")
         except Exception as e:
             await message.answer("❌ Portal issues please try again")
@@ -442,7 +442,7 @@ async def login(
     try:
         page = await context.new_page()
         await page.goto(
-            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=10000000
+            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=100000
         )
         print("Page opened")
         await message.answer("🔐 Logging you in...")
@@ -454,22 +454,22 @@ async def login(
         await page.wait_for_url(
             "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
             wait_until="domcontentloaded",
-            timeout=10000000,
+            timeout=800000,
         )
         await page.fill("#password", password)
         await message.answer("Password entered")
-        await page.click("#btn_login", timeout=10000000)
+        await page.click("#btn_login", timeout=100000)
         await message.answer("Logging in...")
         try:
             await message.answer("Checking credentials...")
-            await page.wait_for_selector("span.swal2-x-mark", timeout=5000000000)
+            await page.wait_for_selector("span.swal2-x-mark", timeout=100000)
             await message.answer("❌ Name and password invalid Try again")
             return False
         except Exception as e:
             await message.answer("🏠 Credentials entered redirecting to home page..")
             await message.answer("Redirecting...")
             # print("redirecting you to home page")
-            await page.wait_for_selector("span.student_name", timeout=8000000)
+            await page.wait_for_selector("span.student_name", timeout=800000)
             session_url = page.url
             await page.close()
             return session_url
