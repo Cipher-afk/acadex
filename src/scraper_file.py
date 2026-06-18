@@ -438,40 +438,40 @@ async def login(
     context: BrowserContext, username: str, password: str, message: Message
 ):
     # await message.answer("Login Started")
-    while True:
+    # while True:
+    try:
+        page = await context.new_page()
+        await page.goto(
+            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=10000000
+        )
+        print("Page opened")
+        await message.answer("🔐 Logging you in...")
+        await page.fill("#username", username)
+        await page.get_by_text("Continue").click()
+        print("continue clicked")
+        await page.wait_for_url(
+            "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
+            wait_until="domcontentloaded",
+            timeout=10000000,
+        )
+        await page.fill("#password", password)
+        await page.click("#btn_login", timeout=10000000)
         try:
-            page = await context.new_page()
-            await page.goto(
-                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=10000000
-            )
-            print("Page opened")
-            await message.answer("🔐 Logging you in...")
-            await page.fill("#username", username)
-            await page.get_by_text("Continue").click()
-            print("continue clicked")
-            await page.wait_for_url(
-                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#"
-            )
-            await page.fill("#password", password)
-            await page.click("#btn_login", timeout=10000000)
-            try:
-                await page.wait_for_selector("span.swal2-x-mark", timeout=500000)
-                await message.answer("❌ Name and password invalid Try again")
-                return False
-            except Exception as e:
-                await message.answer(
-                    "🏠 Credentials entered redirecting to home page.."
-                )
-                await message.answer("Redirecting...")
-                # print("redirecting you to home page")
-                await page.wait_for_selector("span.student_name", timeout=8000000)
-                session_url = page.url
-                await page.close()
-                return session_url
-        except TimeoutError:
-            await message.answer("❌ Network Timeout Retrying....")
+            await page.wait_for_selector("span.swal2-x-mark", timeout=500000)
+            await message.answer("❌ Name and password invalid Try again")
+            return False
+        except Exception as e:
+            await message.answer("🏠 Credentials entered redirecting to home page..")
+            await message.answer("Redirecting...")
+            # print("redirecting you to home page")
+            await page.wait_for_selector("span.student_name", timeout=8000000)
+            session_url = page.url
             await page.close()
-            continue
+            return session_url
+    except TimeoutError:
+        await message.answer("❌ Network Timeout Retrying....")
+        await page.close()
+        # continue
 
 
 async def main(
