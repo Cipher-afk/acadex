@@ -480,13 +480,13 @@ async def login(
                 await message.answer("Redirecting...")
 
                 # print("redirecting you to home page")
-                await page.wait_for_timeout(60000)
+
+                await page.wait_for_selector("span.student_name", timeout=800000)
                 await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
                 await bot.send_photo(
                     chat_id=message.chat.id,
                     photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
                 )
-                await page.wait_for_selector("span.student_name", timeout=800000)
                 session_url = page.url
                 await page.close()
                 return session_url
