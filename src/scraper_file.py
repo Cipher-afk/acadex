@@ -139,6 +139,14 @@ async def download_results(
             while True:
                 try:
                     await page.wait_for_selector(".highest_gpa", timeout=800000)
+                    if page.locator(".highest_gpa").text_content(timeout=800000) != "":
+                        pass
+                    else:
+                        await message.answer(
+                            "Page not loaded properly due to website issues 💀 Retrying now..."
+                        )
+                        await options.nth(i).click()
+                        continue
                     print("Found highest gpa")
                     semesters = page.locator("li.nav-item")
                     semester_count = await semesters.count()
