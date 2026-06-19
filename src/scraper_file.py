@@ -435,7 +435,7 @@ async def download_admmission_forms(
 
 
 async def login(
-    context: BrowserContext, username: str, password: str, message: Message
+    context: BrowserContext, username: str, password: str, message: Message, bot: Bot
 ):
     # await message.answer("Login Started")
     while True:
@@ -462,7 +462,7 @@ async def login(
             await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=100000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=120000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
@@ -470,7 +470,14 @@ async def login(
                     "🏠 Credentials entered redirecting to home page.."
                 )
                 await message.answer("Redirecting...")
+
                 # print("redirecting you to home page")
+                await page.wait_for_timeout(60000)
+                await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
+                await bot.send_photo(
+                    chat_id=message.chat.id,
+                    photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
+                )
                 await page.wait_for_selector("span.student_name", timeout=800000)
                 session_url = page.url
                 await page.close()
@@ -488,7 +495,7 @@ async def main(
         await message.answer("Scrape started")
         await message.answer("Loading...")
         browser = await p.chromium.launch(
-            headless=True,
+            headless=False,
             args=[
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
@@ -504,7 +511,11 @@ async def main(
             session_url = await get_url()
         else:
             session_url = await login(
-                context=context, username=username, password=password, message=message
+                context=context,
+                username=username,
+                password=password,
+                message=message,
+                bot=bot,
             )
             if session_url is not False:
                 await store_url(session_url)
