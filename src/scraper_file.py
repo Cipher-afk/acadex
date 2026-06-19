@@ -112,7 +112,7 @@ async def download_results(
             await page.click(".selection")
             await page.wait_for_selector("li[role='option']", timeout=800000)
             options = page.locator("li[role='option']")
-            if options.count() <= 1:
+            if await options.count() <= 1:
                 await message.answer(
                     "Page not loaded properly due to website issues 💀 Retrying now..."
                 )
@@ -462,7 +462,7 @@ async def login(
             await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=120000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=60000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
@@ -495,7 +495,7 @@ async def main(
         await message.answer("Scrape started")
         await message.answer("Loading...")
         browser = await p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
