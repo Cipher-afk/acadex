@@ -187,6 +187,40 @@ async def get_results(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
+@router.message(Command("get_results"))
+async def get_result_summary(message: Message, bot: Bot):
+    telegram_username = message.chat.id
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
+    username, password = data["username"], data["password"]
+    print("Got username")
+    await message.answer("Working....")
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="result_summary",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
+
+
 @router.message(Command("download_courses"))
 async def get_courses(message: Message, bot: Bot):
     telegram_username = message.chat.id
