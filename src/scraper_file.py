@@ -252,7 +252,7 @@ async def get_result_summary(
         element_html = await page.evaluate(
             "()=> document.querySelector('#resultdiv').outerHTML;"
         )
-        filename = Path(BASE_DIR, "Result Summary")
+        filename = Path(BASE_DIR, "Result Summary.pdf")
         await pdf_page.evaluate(
             "(html)=>{document.body.innerHTML = html};", element_html
         )
@@ -569,6 +569,7 @@ async def main(
             if session_url is not False:
                 await store_url(session_url)
                 await message.answer("✅ Logged In Successfully")
+                await message.answer("Getting Profile details... 👨‍💻")
             else:
                 return
             try:
