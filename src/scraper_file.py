@@ -259,7 +259,7 @@ async def get_result_summary(
         await pdf_page.pdf(path=filename, format="A4", print_background=True)
         await bot.send_document(
             chat_id=message.chat.id,
-            document=FSInputFile(path=filename, filename="Result Summary"),
+            document=FSInputFile(path=filename),
             caption="Your Result summary has been successfully downloaded Thank you for choosing acadex 😎🥰".title(),
         )
         os.remove(path=filename)
