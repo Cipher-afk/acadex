@@ -106,7 +106,7 @@ async def download_results(
             await menu.get_by_text("Courses", exact=True).click(timeout=800000)
             print("Courses clicked")
             await menu.get_by_text("View Results", exact=True).click(timeout=800000)
-            print("View Results clicked")
+            await message.answer("View Results clicked")
             await page.wait_for_selector(".selection", timeout=800000)
             await message.answer(f"🔍 Results Found")
             await page.click(".selection")
@@ -140,8 +140,10 @@ async def download_results(
                 try:
                     await page.wait_for_selector(".highest_gpa", timeout=800000)
                     if (
-                        await page.locator(".highest_gpa").text_content(timeout=800000)
-                        != ""
+                        await len(
+                            page.locator(".highest_gpa").text_content(timeout=800000)
+                        )
+                        > 1
                     ):
                         pass
                     else:
@@ -227,6 +229,42 @@ async def download_results(
         else:
             print(session)
             pass
+
+
+async def get_result_summary(
+    context: BrowserContext, session_url: str, message: Message, bot: Bot
+):
+    menu, page = await get_menu(
+        session_url=session_url, context=context, message=message
+    )
+    await message.answer("📊 Fetching Results....")
+    try:
+        await menu.get_by_text("Courses", exact=True).click(timeout=800000)
+        print("Courses clicked")
+        await menu.get_by_text("Result Summary", exact=True).click(timeout=800000)
+        await page.wait_for_selector("#resultdiv", timeout=120000, state="visible")
+        await message.answer("Results Page Loading.... 🔃")
+        pdf_page = await context.new_page()
+        await pdf_page.goto(session_url, wait_until="domcontentloaded")
+        await message.answer(
+            f"Downloading your Result summary...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
+        )
+        element_html = await page.evaluate(
+            "()=> document.querySelector('#resultdiv').outerHTML;"
+        )
+        filename = Path(BASE_DIR, "Result Summary")
+        await pdf_page.evaluate(
+            "(html)=>{document.body.innerHTML = html};", element_html
+        )
+        await pdf_page.pdf(path=filename, format="A4", print_background=True)
+        await bot.send_document(
+            chat_id=message.chat.id,
+            document=FSInputFile(path=filename, filename="Result Summary"),
+            caption="Your Result summary has been successfully downloaded Thank you for choosing acadex 😎🥰".title(),
+        )
+        os.remove(path=filename)
+    except TimeoutError:
+        await message.answer("Network Timeout Error Retry ❌")
 
 
 async def download_courses(
@@ -543,6 +581,13 @@ async def main(
                     )
                 elif download_info == "results":
                     documents = await download_results(
+                        context=context,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
+                elif download_info == "result_summary":
+                    documents = await get_result_summary(
                         context=context,
                         session_url=session_url,
                         message=message,
