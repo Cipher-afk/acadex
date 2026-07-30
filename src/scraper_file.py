@@ -409,11 +409,10 @@ async def download_biodata(
         await page.wait_for_selector("#my_details", state="visible")
         print("selector found")
         await asyncio.sleep(10)
-        element_html = await page.evaluate("""  ()=>{
-          const head = document.head.outerHtml;
-          const html = document.querySelector("#my_details")?.outerHTML ?? null;
-          return `<html><head>${head}</head><body>${html}</body></html>`}
-          """)
+        element_html = await page.evaluate(
+            """()=> document.querySelector("#my_details").outerHTML
+          """
+        )
         # print(element_html)
 
         if not element_html:

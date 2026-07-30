@@ -152,7 +152,7 @@ async def get_level(message: Message, state: FSMContext):
 @router.callback_query(F.data == "download_receipts")
 async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
     await callback.answer()
-    message = await callback.message
+    message = callback.message
     telegram_username = str(message.chat.id)
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -193,8 +193,9 @@ async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
 
 
 @router.callback_query(F.data == "download_results")
-async def get_results(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_results(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -228,8 +229,9 @@ async def get_results(callback: CallbackQuery, message: Message, bot: Bot):
 
 
 @router.callback_query(F.data == "result_summary")
-async def get_result_summary(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_result_summary(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -263,8 +265,9 @@ async def get_result_summary(callback: CallbackQuery, message: Message, bot: Bot
 
 
 @router.callback_query(F.data == "download_courses")
-async def get_courses(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_courses(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -332,8 +335,9 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
 
 
 @router.callback_query(F.data == "admission_forms")
-async def get_admission_forms(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
