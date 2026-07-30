@@ -150,8 +150,9 @@ async def get_level(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "download_receipts")
-async def get_payment_receipts(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = await callback.message
     telegram_username = str(message.chat.id)
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -296,8 +297,9 @@ async def get_courses(callback: CallbackQuery, message: Message, bot: Bot):
 
 
 @router.callback_query(F.data == "download_biodata")
-async def get_biodata(callback: CallbackQuery, message: Message, bot: Bot):
+async def get_biodata(callback: CallbackQuery, bot: Bot):
     await callback.answer()
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
