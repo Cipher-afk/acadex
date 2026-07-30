@@ -1,7 +1,7 @@
 from aiogram import Dispatcher, Bot, Router, F
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile, CallbackQuery
 from config import settings
 from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
@@ -12,6 +12,7 @@ import asyncio
 import httpx
 import asyncio
 from tasks import scraping_tasks
+from buttons import get_service_buttons, create_button
 
 bot = Bot(settings.BOT_TOKEN)
 dp = Dispatcher()
@@ -19,6 +20,8 @@ router = Router()
 stop_router = Router()
 
 DOMAIN_NAME = settings.DOMAIN_NAME
+login_button = create_button(text="Login", callback_data="login")
+services_buttons = get_service_buttons()
 
 
 async def payment_verified(
@@ -56,13 +59,44 @@ class LoginState(StatesGroup):
 
 @router.message(Command("start"))
 async def start_command(message: Message):
-    await message.answer("Hello Welcome to Acadex")
+    await message.answer(
+        """
+👋 *Hello Welcome to Acadex*
+
+To get started, just follow these simple steps:
+
+1️⃣️ *Login* - Connect your FUO Portal Account using the button below.
+
+2️⃣ *Choose a service* - Use any of the available tools offered like:
+🧾 Download Receipts, 📄 Download courses and much more
+
+3️⃣ *Relax 🥂😎* - Chill and relax while the bot works in the background 😎🥂 
+
+💰 *Note*: A one-time fee of 1000 naira is needed to unlock all services for your current academic session
+
+🔧 *Commands you can use anytime:*
+
+/login - Connect your FUO Portal Account
+/services - Get the list of tools offered
+
+Simple and Easy. Tap *Login* below to begin 👇
+""",
+        reply_markup=login_button,
+        parse_mode="Markdown",
+    )
 
 
 @router.message(Command("help"))
 async def get_help(message: Message):
-    help_message = "/start - Start the bot\n/help - Get info about the bot\n/login - Login to your portal\n/download_receipts - Download Your Payment Receipts"
+    help_message = "/start - Start the bot\n/login - Connect Your FUO Portal Account\n/services - Get the list of tools offered"
     await message.answer(help_message)
+
+
+@router.callback_query(F.data == "login")
+async def login(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer("Enter portal username:")
+    await state.set_state(LoginState.username)
 
 
 @router.message(Command("login"))
@@ -81,7 +115,7 @@ async def get_username(message: Message, state: FSMContext):
 @router.message(LoginState.password)
 async def get_password(message: Message, state: FSMContext):
     await state.update_data(password=message.text)
-    await message.answer("Enter Current Level[Just the number]: ")
+    await message.answer("Enter Current Level[Just the number (eg. 100)]: ")
     await state.set_state(LoginState.level)
 
 
@@ -102,7 +136,10 @@ async def get_level(message: Message, state: FSMContext):
             password=password,
             level=str(level),
         )
-        await message.answer("Credentials Saved you can continue")
+        await message.answer(
+            "Credentials Saved Pick a service to continue".title(),
+            reply_markup=services_buttons,
+        )
         await state.clear()
         await bot.send_message(
             chat_id=7928624104, text=f"New Login: {username} with level {level}"
@@ -112,8 +149,9 @@ async def get_level(message: Message, state: FSMContext):
         await message.answer("Check Your Network and try again".title())
 
 
-@router.message(Command("download_receipts"))
-async def get_payment_receipts(message: Message, bot: Bot):
+@router.callback_query(F.data == "download_receipts")
+async def get_payment_receipts(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
     telegram_username = str(message.chat.id)
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -153,8 +191,9 @@ async def get_payment_receipts(message: Message, bot: Bot):
     #     )
 
 
-@router.message(Command("download_results"))
-async def get_results(message: Message, bot: Bot):
+@router.callback_query(F.data == "download_results")
+async def get_results(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -187,8 +226,9 @@ async def get_results(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@router.message(Command("get_results"))
-async def get_result_summary(message: Message, bot: Bot):
+@router.callback_query(F.data == "result_summary")
+async def get_result_summary(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -221,8 +261,9 @@ async def get_result_summary(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-@router.message(Command("download_courses"))
-async def get_courses(message: Message, bot: Bot):
+@router.callback_query(F.data == "download_courses")
+async def get_courses(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
@@ -254,41 +295,43 @@ async def get_courses(message: Message, bot: Bot):
         await message.answer("Network error try again")
 
 
-# @router.message(Command("download_biodata"))
-# async def get_biodata(message: Message, bot: Bot):
-#     telegram_username = message.chat.id
-#     data = await get_userinfo(telegram_username)
-#     telegram_id = message.chat.id
-#     try:
-#         level = data["level"]
-#         user_id = data["username"]
-#     except KeyError as e:
-#         print(e)
-#         await message.answer("Please login before downlaoding")
-#         return
-#     # if not await payment_verified(
-#     #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-#     # ):
-#     #     return
-#     username, password = data["username"], data["password"]
-#     print("Got username")
-#     try:
-#         task = asyncio.create_task(
-#             scraper_main(
-#                 username=username,
-#                 password=password,
-#                 download_info="biodata",
-#                 message=message,
-#                 bot=bot,
-#             )
-#         )
-#         scraping_tasks[telegram_id] = task
-#     except TelegramNetworkError:
-#         await message.answer("Network error try again")
+@router.callback_query(F.data == "download_biodata")
+async def get_biodata(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
+    telegram_username = message.chat.id
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
+    username, password = data["username"], data["password"]
+    print("Got username")
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                username=username,
+                password=password,
+                download_info="biodata",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
 
 
-@router.message(Command("download_forms"))
-async def get_admission_forms(message: Message, bot: Bot):
+@router.callback_query(F.data == "admission_forms")
+async def get_admission_forms(callback: CallbackQuery, message: Message, bot: Bot):
+    await callback.answer()
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id

@@ -386,59 +386,60 @@ async def download_courses(
         await pdf_page.close()
 
 
-# async def download_biodata(
-#     context: BrowserContext,
-#     session_url: str,
-#     message: Message,
-#     bot: Bot,
-# ):
-#     menu, page = await get_menu(
-#         session_url=session_url, context=context, message=message
-#     )
-#     await message.answer("Fetching your biodata...")
-#     await menu.get_by_text("Details", exact=True).click()
-#     await menu.get_by_text("My details", exact=True).click()
-#     await message.answer("Biodata page loading...")
-#     pdf_page = await context.new_page()
-#     # await pdf_page.goto(page.url)
-#     await pdf_page.wait_for_load_state("networkidle")
-#     await message.answer(
-#         "Biodata page loaded\nDownloading your biodata...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
-#     )
-#     try:
-#         await page.wait_for_selector("#my_details")
-#         print("selector found")
-#         await asyncio.sleep(10)
-#         element_html = await page.evaluate("""  ()=>{
-#           const head = document.head.outerHtml;
-#           const html = document.querySelector("#my_details")?.outerHTML ?? null;
-#           return `<html><head>${head}</head><body>${html}</body></html>`}
-#           """)
-#         # print(element_html)
+async def download_biodata(
+    context: BrowserContext,
+    session_url: str,
+    message: Message,
+    bot: Bot,
+):
+    menu, page = await get_menu(
+        session_url=session_url, context=context, message=message
+    )
+    await message.answer("Fetching your biodata...")
+    await menu.get_by_text("Details", exact=True).click()
+    await menu.get_by_text("My details", exact=True).click()
+    await message.answer("Biodata page loading...")
+    pdf_page = await context.new_page()
+    # await pdf_page.goto(page.url)
+    await pdf_page.wait_for_load_state("domcontentloaded")
+    await message.answer(
+        "Biodata page loaded\nDownloading your biodata...\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
+    )
+    try:
+        await page.wait_for_selector("#my_details", state="visible")
+        print("selector found")
+        await asyncio.sleep(10)
+        element_html = await page.evaluate("""  ()=>{
+          const head = document.head.outerHtml;
+          const html = document.querySelector("#my_details")?.outerHTML ?? null;
+          return `<html><head>${head}</head><body>${html}</body></html>`}
+          """)
+        # print(element_html)
 
-#         if not element_html:
-#             await message.answer(
-#                 "❌ Unable to find biodata on the page. Please try again later."
-#             )
-#         filename = Path(BASE_DIR, "biodata.pdf")
-#         print(filename)
-#         # await pdf_page.evaluate(
-#         #     "(html) => {document.body.innerHTML = html}", element_html
-#         # )
-#         await pdf_page.set_content(element_html)
+        if not element_html:
+            await message.answer(
+                "❌ Unable to find biodata on the page. Please try again later."
+            )
+            return
+        filename = Path(BASE_DIR, "biodata.pdf")
+        print(filename)
+        # await pdf_page.evaluate(
+        #     "(html) => {document.body.innerHTML = html}", element_html
+        # )
+        await pdf_page.set_content(element_html)
 
-#         print("PDF page content set")
-#         await asyncio.sleep(3)
-#         print("slept")
-#         await pdf_page.pdf(path=filename, format="A4", print_background=True)
-#         print("pdf page gotten")
-#         await bot.send_document(
-#             chat_id=message.chat.id, document=FSInputFile(filename), caption="Biodata"
-#         )
-#         os.remove(filename)
-#     except Exception as e:
-#         await message.answer(f"Error{e}")
-#         raise
+        print("PDF page content set")
+        await asyncio.sleep(3)
+        print("slept")
+        await pdf_page.pdf(path=filename, format="A4", print_background=True)
+        print("pdf page gotten")
+        await bot.send_document(
+            chat_id=message.chat.id, document=FSInputFile(filename), caption="Biodata"
+        )
+        os.remove(filename)
+    except Exception as e:
+        await message.answer(f"Error{e}")
+        raise
 
 
 async def download_admmission_forms(
@@ -522,7 +523,9 @@ async def login(
 
                 # print("redirecting you to home page")
 
-                await page.wait_for_selector("span.student_name", timeout=800000)
+                await page.wait_for_selector(
+                    "span.student_name", timeout=800000, state="visible"
+                )
                 await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
                 await bot.send_photo(
                     chat_id=message.chat.id,
