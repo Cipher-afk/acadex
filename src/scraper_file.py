@@ -605,14 +605,14 @@ async def main(
                         bot=bot,
                     )
 
-                # elif download_info == "biodata":
-                #     await download_biodata(
-                #         context=context,
-                #         session_url=session_url,
-                #         message=message,
-                #         bot=bot,
-                #     )
-                #     print("Done")
+                elif download_info == "biodata":
+                    await download_biodata(
+                        context=context,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
+                    print("Done")
 
                 elif download_info == "admission_forms":
                     await download_admmission_forms(
