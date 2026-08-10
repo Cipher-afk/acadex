@@ -140,8 +140,8 @@ async def download_results(
                 try:
                     await page.wait_for_selector(".highest_gpa", timeout=800000)
                     if (
-                        await len(
-                            page.locator(".highest_gpa").text_content(timeout=800000)
+                        len(
+                            await page.locator(".highest_gpa").text_content(timeout=800000)
                         )
                         > 1
                     ):
