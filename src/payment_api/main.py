@@ -57,7 +57,7 @@ async def initialize_payment(
 
         data = {
             "email": f"ajaokudos34@gmail.com",
-            "amount": 500 * 100,
+            "amount": 1000 * 100,
             "metadata": {
                 "telegram_id": user.telegram_id,
                 "level": user.level,
