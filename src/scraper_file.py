@@ -11,7 +11,7 @@ from tasks import scraping_tasks
 BASE_DIR = Path(__file__).resolve().parent
 
 
-async def get_menu(session_url: str, context: BrowserContext, message: Message):
+async def get_menu(session_url: str,bot:Bot,context: BrowserContext, message:Message):
     while True:
         try:
             page = await context.new_page()
@@ -20,6 +20,15 @@ async def get_menu(session_url: str, context: BrowserContext, message: Message):
                 ".d-inline-flex.text-capitalize.user_text", timeout=8000000
             )
             await message.answer("🏫 FUO Home Page Loaded")
+            if await page.locator("row g-5 myfeelist").is_visible():
+                await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
+                await bot.send_photo(
+                    chat_id=message.chat.id,
+                    photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
+                    caption='Your portal is blocked due to unpaid fees 😣😥'
+                )
+                return False
+
             if await page.locator("#kt_aside_mobile_toggle").is_visible():
                 await page.click("#kt_aside_mobile_toggle")
                 print("Toggle clicked")
@@ -36,10 +45,12 @@ async def get_menu(session_url: str, context: BrowserContext, message: Message):
             continue
 
 
+
+
 async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
-    menu, page = await get_menu(session_url, context, message=message)
+    menu, page = await get_menu(session_url=session_url,bot=bot, context=context, message=message)
     await menu.get_by_text("Payments", exact=True).click(timeout=800000)
     await message.answer("🔍 Looking for your receipts....")
     await menu.get_by_text("Payment Receipts", exact=True).click(timeout=800000)
@@ -98,7 +109,7 @@ async def download_results(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url, context=context, message=message
+        session_url=session_url, bot=bot, context=context, message=message
     )
     await message.answer("📊 Fetching Results....")
     while True:
@@ -235,7 +246,7 @@ async def get_result_summary(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url, context=context, message=message
+        session_url=session_url,bot=bot, context=context, message=message
     )
     await message.answer("📊 Fetching Results....")
     try:
@@ -275,7 +286,7 @@ async def download_courses(
     level: int = None,
 ):
     menu, page = await get_menu(
-        session_url=session_url, context=context, message=message
+        session_url=session_url, bot=bot, context=context, message=message
     )
     await menu.get_by_text("Courses", exact=True).click()
     print("Courses clicked")
@@ -393,7 +404,7 @@ async def download_biodata(
     bot: Bot,
 ):
     menu, page = await get_menu(
-        session_url=session_url, context=context, message=message
+        session_url=session_url,bot=bot, context=context, message=message
     )
     await message.answer("Fetching your biodata...")
     await menu.get_by_text("Details", exact=True).click()
@@ -445,7 +456,7 @@ async def download_admmission_forms(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        context=context, session_url=session_url, message=message
+        context=context,bot=bot, session_url=session_url, message=message
     )
     await menu.get_by_text("Details", exact=True).click()
     await menu.get_by_text("Registration Documents", exact=True).click()

@@ -104,6 +104,9 @@ async def login(message: Message, state: FSMContext):
     await message.answer("Enter portal username:")
     await state.set_state(LoginState.username)
 
+@router.message(Command('services'))
+async def get_services(message:Message):
+    return
 
 @router.message(LoginState.username)
 async def get_username(message: Message, state: FSMContext):
@@ -337,7 +340,7 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
 @router.callback_query(F.data == "admission_forms")
 async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     await callback.answer()
-    message = callback.message
+    message = callback.messagea
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
