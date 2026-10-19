@@ -20,14 +20,6 @@ async def get_menu(session_url: str,bot:Bot,context: BrowserContext, message:Mes
                 ".d-inline-flex.text-capitalize.user_text", timeout=8000000
             )
             await message.answer("🏫 FUO Home Page Loaded")
-            if await page.locator("row g-5 myfeelist").is_visible():
-                await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
-                await bot.send_photo(
-                    chat_id=message.chat.id,
-                    photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
-                    caption='Your portal is blocked due to unpaid fees 😣😥'
-                )
-                return False
 
             if await page.locator("#kt_aside_mobile_toggle").is_visible():
                 await page.click("#kt_aside_mobile_toggle")
@@ -532,7 +524,14 @@ async def login(
                 await message.answer("Redirecting...")
 
                 # print("redirecting you to home page")
-
+                if await page.locator("row g-5 myfeelist").is_visible():
+                    await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
+                    await bot.send_photo(
+                        chat_id=message.chat.id,
+                        photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
+                        caption='Your portal is blocked due to unpaid fees 😣😥'
+                    )
+                    return False
                 await page.wait_for_selector(
                     "span.student_name", timeout=800000, state="visible"
                 )
