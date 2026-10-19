@@ -50,6 +50,7 @@ async def payment_verified(
             except Exception as e:
                 await message.answer("Network Error try again")
                 print(e)
+    return True
 
 
 class LoginState(StatesGroup):
