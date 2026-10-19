@@ -106,7 +106,7 @@ async def login(message: Message, state: FSMContext):
 
 @router.message(Command('services'))
 async def get_services(message:Message):
-    return
+    await message.answer('Pick one of the services and enjoy your day while acadex does your work 🥂🛀',reply_markup=services_buttons)
 
 @router.message(LoginState.username)
 async def get_username(message: Message, state: FSMContext):
