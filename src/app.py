@@ -27,7 +27,7 @@ services_buttons = get_service_buttons()
 async def payment_verified(
     user_id, telegram_id, level: str, message: Message, bot: Bot
 ):
-    message.answer("🤖 Bot loading.....")
+    await message.answer("🤖 Bot loading.....")
     if user_id != 'kudos.ajao':
         if not await get_payment(user_id=user_id):
             timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)

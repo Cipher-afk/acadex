@@ -524,7 +524,9 @@ async def login(
                 await message.answer("Redirecting...")
 
                 # print("redirecting you to home page")
-                if await page.locator("row g-5 myfeelist").is_visible():
+                if await page.wait_for_selector('.user_text',timeout=800000):
+                    await message.answer("🏫 FUO Home Page Loaded")
+                if await page.locator(".row.g-5.myfeelist").is_visible():
                     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
                     await bot.send_photo(
                         chat_id=message.chat.id,
