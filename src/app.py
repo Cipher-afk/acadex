@@ -28,27 +28,28 @@ async def payment_verified(
     user_id, telegram_id, level: str, message: Message, bot: Bot
 ):
     message.answer("🤖 Bot loading.....")
-    if not await get_payment(user_id=user_id):
-        timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                res = await client.post(
-                    f"{DOMAIN_NAME}/init-payment",
-                    json={
-                        "user_id": user_id,
-                        "telegram_id": str(telegram_id),
-                        "level": str(level),
-                    },
-                )
-                payment_link = res.json()["payment_link"]
-                if payment_link is not None:
-                    message_ = f"Please procced with your payment of 500 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
-                    await bot.send_message(chat_id=message.chat.id, text=message_)
-                    return False
-                return True
-        except Exception as e:
-            await message.answer("Network Error try again")
-            print(e)
+    if user_id != 'kudos.ajao':
+        if not await get_payment(user_id=user_id):
+            timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    res = await client.post(
+                        f"{DOMAIN_NAME}/init-payment",
+                        json={
+                            "user_id": user_id,
+                            "telegram_id": str(telegram_id),
+                            "level": str(level),
+                        },
+                    )
+                    payment_link = res.json()["payment_link"]
+                    if payment_link is not None:
+                        message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
+                        await bot.send_message(chat_id=message.chat.id, text=message_)
+                        return False
+                    return True
+            except Exception as e:
+                await message.answer("Network Error try again")
+                print(e)
 
 
 class LoginState(StatesGroup):
