@@ -28,7 +28,7 @@ async def payment_verified(
     user_id, telegram_id, level: str, message: Message, bot: Bot
 ):
     await message.answer("🤖 Bot loading.....")
-    if user_id != 'kudos.ajao':
+    if user_id != "kudos.ajao":
         if not await get_payment(user_id=user_id):
             timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
             try:
@@ -74,7 +74,8 @@ To get started, just follow these simple steps:
 
 3️⃣ *Relax 🥂😎* - Chill and relax while the bot works in the background 😎🥂 
 
-💰 *Note*: A one-time fee of 1000 naira is needed to unlock all services for your current academic session
+💰 *Note*: A one-time fee of 1000 naira is needed to unlock all services for your current academic session and during release of results
+    acadex might have a little delay in getting your results due to the portal's response time but rest assured you will get your results as soon as possible cause acadex is a bot that works 24/7 and never sleeps 😎🥂
 
 🔧 *Commands you can use anytime:*
 
@@ -106,9 +107,14 @@ async def login(message: Message, state: FSMContext):
     await message.answer("Enter portal username:")
     await state.set_state(LoginState.username)
 
-@router.message(Command('services'))
-async def get_services(message:Message):
-    await message.answer('Pick one of the services and enjoy your day while acadex does your work 🥂🛀',reply_markup=services_buttons)
+
+@router.message(Command("services"))
+async def get_services(message: Message):
+    await message.answer(
+        "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
+        reply_markup=services_buttons,
+    )
+
 
 @router.message(LoginState.username)
 async def get_username(message: Message, state: FSMContext):

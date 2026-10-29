@@ -566,14 +566,6 @@ async def login(
                 # print("redirecting you to home page")
                 if await page.wait_for_selector(".user_text", timeout=800000):
                     await message.answer("🏫 FUO Home Page Loaded")
-                if await page.locator(".row.g-5.myfeelist").is_visible():
-                    await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
-                    await bot.send_photo(
-                        chat_id=message.chat.id,
-                        photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
-                        caption="Your portal is blocked due to unpaid fees 😣😥",
-                    )
-                    return False
                 await page.wait_for_selector(
                     "span.student_name", timeout=800000, state="visible"
                 )
