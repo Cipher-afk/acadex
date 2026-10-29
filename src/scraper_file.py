@@ -10,6 +10,17 @@ from tasks import scraping_tasks
 
 BASE_DIR = Path(__file__).resolve().parent
 
+async def is_fee_blocked(page:Page):
+    if await page.locator(".row.g-5.myfeelist").is_visible():
+        await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
+        await bot.send_photo(
+            chat_id=message.chat.id,
+            photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
+            caption='Your portal is blocked due to unpaid fees 😣😥'
+        )
+        return True
+    return False
+
 
 async def get_menu(session_url: str,bot:Bot,context: BrowserContext, message:Message):
     while True:
@@ -43,6 +54,9 @@ async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
     menu, page = await get_menu(session_url=session_url,bot=bot, context=context, message=message)
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await menu.get_by_text("Payments", exact=True).click(timeout=800000)
     await message.answer("🔍 Looking for your receipts....")
     await menu.get_by_text("Payment Receipts", exact=True).click(timeout=800000)
@@ -103,6 +117,9 @@ async def download_results(
     menu, page = await get_menu(
         session_url=session_url, bot=bot, context=context, message=message
     )
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await message.answer("📊 Fetching Results....")
     while True:
         try:
@@ -240,6 +257,9 @@ async def get_result_summary(
     menu, page = await get_menu(
         session_url=session_url,bot=bot, context=context, message=message
     )
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await message.answer("📊 Fetching Results....")
     try:
         await menu.get_by_text("Courses", exact=True).click(timeout=800000)
@@ -280,6 +300,9 @@ async def download_courses(
     menu, page = await get_menu(
         session_url=session_url, bot=bot, context=context, message=message
     )
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await menu.get_by_text("Courses", exact=True).click()
     print("Courses clicked")
     await asyncio.sleep(3)
@@ -398,6 +421,9 @@ async def download_biodata(
     menu, page = await get_menu(
         session_url=session_url,bot=bot, context=context, message=message
     )
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await message.answer("Fetching your biodata...")
     await menu.get_by_text("Details", exact=True).click()
     await menu.get_by_text("My details", exact=True).click()
@@ -450,6 +476,9 @@ async def download_admmission_forms(
     menu, page = await get_menu(
         context=context,bot=bot, session_url=session_url, message=message
     )
+    fee_blocked = await is_fee_blocked(page=page)
+    if fee_blocked:
+        return
     await menu.get_by_text("Details", exact=True).click()
     await menu.get_by_text("Registration Documents", exact=True).click()
     await message.answer("Registration Documents Pages Loading.....")
