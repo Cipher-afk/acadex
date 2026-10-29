@@ -530,6 +530,7 @@ async def login(
     context: BrowserContext, username: str, password: str, message: Message, bot: Bot
 ):
     # await message.answer("Login Started")
+    MAX_RETRIES = 5
     while True:
         try:
             page = await context.new_page()
@@ -546,37 +547,58 @@ async def login(
             await page.wait_for_url(
                 "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
                 wait_until="domcontentloaded",
-                timeout=800000,
+                timeout=4000,
             )
             await page.fill("#password", password)
             await message.answer("Password entered")
-            await page.click("#btn_login", timeout=100000)
+            await page.click("#btn_login", timeout=4000)
             await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=60000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=4000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
                 await message.answer(
                     "🏠 Credentials entered redirecting to home page.."
                 )
-                await message.answer("Redirecting...")
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    await message.answer("Redirecting...")
 
-                # print("redirecting you to home page")
-                if await page.wait_for_selector(".user_text", timeout=800000):
-                    await message.answer("🏫 FUO Home Page Loaded")
-                await page.wait_for_selector(
-                    "span.student_name", timeout=800000, state="visible"
-                )
-                await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
-                await bot.send_photo(
-                    chat_id=message.chat.id,
-                    photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
-                )
-                session_url = page.url
-                await page.close()
-                return session_url
+                    # print("redirecting you to home page")
+                    if await page.wait_for_selector(".user_text", timeout=4000):
+                        await message.answer("🏫 FUO Home Page Loaded")
+                        await message.answer("Getting your profile details...🔃")
+                    await page.wait_for_selector(
+                        ".d-inline-flex.text-capitalize.user_text", timeout=4000
+                    )
+                    # await page.wait_for_selector(
+                    #     "span.student_name", timeout=800000, state="visible"
+                    # )
+                    await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
+                    await bot.send_photo(
+                        chat_id=message.chat.id,
+                        photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
+                    )
+                    session_url = page.url
+                    await page.close()
+                    return session_url
+                except TimeoutError:
+                    if attempt == MAX_RETRIES:
+                        await message.answer(
+                            f"Couldn't load the portal try again later 🤕"
+                        )
+                        return False
+                    await message.answer(
+                        f"❌ Network Timeout Retrying to redirect to home page attempt {attempt} of {MAX_RETRIES}...."
+                    )
+                    try:
+                        await page.reload(wait_until="domcontentloaded", timeout=3000)
+                    except Exception as e:
+                        pass
+                    await asyncio.sleep(2)
+                    continue
         except TimeoutError:
             await message.answer("❌ Network Timeout Retrying....")
             await page.close()
