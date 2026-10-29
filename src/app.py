@@ -75,7 +75,7 @@ To get started, just follow these simple steps:
 3️⃣ *Relax 🥂😎* - Chill and relax while the bot works in the background 😎🥂 
 
 💰 *Note*: A one-time fee of 1000 naira is needed to unlock all services for your current academic session and during release of results
-    acadex might have a little delay in getting your results due to the portal's response time but rest assured you will get your results as soon as possible cause acadex is a bot that works 24/7 and never sleeps 😎🥂
+acadex might have a little delay in getting your results due to the portal's response time but rest assured you will get your results as soon as possible cause acadex is a bot that works 24/7 and never sleeps 😎🥂
 
 🔧 *Commands you can use anytime:*
 
@@ -83,6 +83,7 @@ To get started, just follow these simple steps:
 /services - Get the list of tools offered
 
 Simple and Easy. Tap *Login* below to begin 👇
+And also Downloading Receipts is free for all users, let's give you a test run of the bot by downloading your receipts for free 😎🥂
 """,
         reply_markup=login_button,
         parse_mode="Markdown",
@@ -174,10 +175,10 @@ async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
         print(e)
         await message.answer("Please login before downlaoding")
         return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
-        return
+    # if not await payment_verified(
+    #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    # ):
+    #     return
     username, password = data["username"], data["password"]
     print("Got username")
     await message.answer("Working....")
