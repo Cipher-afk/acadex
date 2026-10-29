@@ -36,18 +36,19 @@ async def get_menu(
         try:
             page = await context.new_page()
             await page.goto(session_url, timeout=8000000)
-            await page.wait_for_selector(
-                ".d-inline-flex.text-capitalize.user_text", timeout=8000000
-            )
-            await message.answer("🏫 FUO Home Page Loaded")
-
-            if await page.locator("#kt_aside_mobile_toggle").is_visible():
-                await page.click("#kt_aside_mobile_toggle")
-                print("Toggle clicked")
-            else:
-                await page.wait_for_selector("span.matric_no", timeout=5000000)
-                mat_num = await page.locator("span.matric_no").inner_text()
-                await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
+            if not is_fee_blocked(page=page, bot=bot, message=message):
+                await page.wait_for_selector(
+                    ".d-inline-flex.text-capitalize.user_text", timeout=8000000
+                )
+                await message.answer("🏫 FUO Home Page Loaded")
+                if await page.locator("#kt_aside_mobile_toggle").is_visible():
+                    await page.click("#kt_aside_mobile_toggle")
+                    print("Toggle clicked")
+                else:
+                    await page.wait_for_selector("span.matric_no", timeout=5000000)
+                    mat_num = await page.locator("span.matric_no").inner_text()
+                    await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
+            await message.answer("Getting Menu....")
             menu = page.locator("div.menu-item.menu-accordion")
             await message.answer("🤖 Side Menu Clicked")
             return menu, page
