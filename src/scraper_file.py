@@ -547,15 +547,15 @@ async def login(
             await page.wait_for_url(
                 "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
                 wait_until="domcontentloaded",
-                timeout=4000,
+                timeout=60000,
             )
             await page.fill("#password", password)
             await message.answer("Password entered")
-            await page.click("#btn_login", timeout=4000)
+            await page.click("#btn_login", timeout=60000)
             await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=4000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=60000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
@@ -567,11 +567,11 @@ async def login(
                     await message.answer("Redirecting...")
 
                     # print("redirecting you to home page")
-                    if await page.wait_for_selector(".user_text", timeout=4000):
+                    if await page.wait_for_selector(".user_text", timeout=180000):
                         await message.answer("🏫 FUO Home Page Loaded")
                         await message.answer("Getting your profile details...🔃")
                     await page.wait_for_selector(
-                        ".d-inline-flex.text-capitalize.user_text", timeout=4000
+                        ".d-inline-flex.text-capitalize.user_text", timeout=180000
                     )
                     # await page.wait_for_selector(
                     #     "span.student_name", timeout=800000, state="visible"
@@ -594,7 +594,7 @@ async def login(
                         f"❌ Network Timeout Retrying to redirect to home page attempt {attempt} of {MAX_RETRIES}...."
                     )
                     try:
-                        await page.reload(wait_until="domcontentloaded", timeout=3000)
+                        await page.reload(wait_until="domcontentloaded", timeout=180000)
                     except Exception as e:
                         pass
                     await asyncio.sleep(2)
