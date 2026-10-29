@@ -1,4 +1,10 @@
-from playwright.async_api import async_playwright, BrowserContext, Locator, TimeoutError
+from playwright.async_api import (
+    async_playwright,
+    BrowserContext,
+    Locator,
+    TimeoutError,
+    Page,
+)
 import asyncio
 from redis_config import get_url, store_url
 from pathlib import Path
@@ -10,19 +16,22 @@ from tasks import scraping_tasks
 
 BASE_DIR = Path(__file__).resolve().parent
 
-async def is_fee_blocked(page:Page):
+
+async def is_fee_blocked(page: Page, bot: Bot, message: Message):
     if await page.locator(".row.g-5.myfeelist").is_visible():
         await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
         await bot.send_photo(
             chat_id=message.chat.id,
             photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
-            caption='Your portal is blocked due to unpaid fees 😣😥'
+            caption="Your portal is blocked due to unpaid fees 😣😥",
         )
         return True
     return False
 
 
-async def get_menu(session_url: str,bot:Bot,context: BrowserContext, message:Message):
+async def get_menu(
+    session_url: str, bot: Bot, context: BrowserContext, message: Message
+):
     while True:
         try:
             page = await context.new_page()
@@ -48,13 +57,13 @@ async def get_menu(session_url: str,bot:Bot,context: BrowserContext, message:Mes
             continue
 
 
-
-
 async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
-    menu, page = await get_menu(session_url=session_url,bot=bot, context=context, message=message)
-    fee_blocked = await is_fee_blocked(page=page)
+    menu, page = await get_menu(
+        session_url=session_url, bot=bot, context=context, message=message
+    )
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await menu.get_by_text("Payments", exact=True).click(timeout=800000)
@@ -117,7 +126,7 @@ async def download_results(
     menu, page = await get_menu(
         session_url=session_url, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page)
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await message.answer("📊 Fetching Results....")
@@ -161,7 +170,9 @@ async def download_results(
                     await page.wait_for_selector(".highest_gpa", timeout=800000)
                     if (
                         len(
-                            await page.locator(".highest_gpa").text_content(timeout=800000)
+                            await page.locator(".highest_gpa").text_content(
+                                timeout=800000
+                            )
                         )
                         > 1
                     ):
@@ -255,9 +266,9 @@ async def get_result_summary(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url,bot=bot, context=context, message=message
+        session_url=session_url, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page)
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await message.answer("📊 Fetching Results....")
@@ -300,7 +311,7 @@ async def download_courses(
     menu, page = await get_menu(
         session_url=session_url, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page)
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await menu.get_by_text("Courses", exact=True).click()
@@ -419,9 +430,9 @@ async def download_biodata(
     bot: Bot,
 ):
     menu, page = await get_menu(
-        session_url=session_url,bot=bot, context=context, message=message
+        session_url=session_url, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page)
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await message.answer("Fetching your biodata...")
@@ -474,9 +485,9 @@ async def download_admmission_forms(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        context=context,bot=bot, session_url=session_url, message=message
+        context=context, bot=bot, session_url=session_url, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page)
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
         return
     await menu.get_by_text("Details", exact=True).click()
@@ -553,14 +564,14 @@ async def login(
                 await message.answer("Redirecting...")
 
                 # print("redirecting you to home page")
-                if await page.wait_for_selector('.user_text',timeout=800000):
+                if await page.wait_for_selector(".user_text", timeout=800000):
                     await message.answer("🏫 FUO Home Page Loaded")
                 if await page.locator(".row.g-5.myfeelist").is_visible():
                     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
                     await bot.send_photo(
                         chat_id=message.chat.id,
                         photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
-                        caption='Your portal is blocked due to unpaid fees 😣😥'
+                        caption="Your portal is blocked due to unpaid fees 😣😥",
                     )
                     return False
                 await page.wait_for_selector(
