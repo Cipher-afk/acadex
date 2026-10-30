@@ -139,6 +139,11 @@ async def download_results(
     if fee_blocked:
         return
     await message.answer("📊 Fetching Results....")
+    await page.screenshot(path=Path(BASE_DIR, "error1-screenshot.png"))
+    await bot.send_photo(
+        chat_id=message.chat.id,
+        photo=FSInputFile(Path(BASE_DIR, "error1-screenshot.png"))
+    )
     while True:
         try:
             await menu.get_by_text("Courses", exact=True).click(timeout=60000)
