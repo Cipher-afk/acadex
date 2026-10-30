@@ -578,6 +578,11 @@ async def login(
                             await message.answer("🏫 FUO Home Page Loaded")
                             await message.answer("Getting your profile details...🔃") 
                         else:
+                            await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
+                            await bot.send_photo(
+                                chat_id=message.chat.id,
+                                photo=FSInputFile(Path(BASE_DIR, "error-screenshot.png")),
+                            )
                             raise TimeoutError('Page not loaded properly')
                     # await page.wait_for_selector(
                     #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
