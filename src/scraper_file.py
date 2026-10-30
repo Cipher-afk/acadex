@@ -35,10 +35,11 @@ async def get_menu(
     while True:
         try:
             page = await context.new_page()
+            await message.answer('Getting Menu...')
             await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
-            if not await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
+            if not await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=70000):
                 await page.wait_for_selector(
-                    ".d-inline-flex.text-capitalize.user_text", timeout=80000
+                    ".d-inline-flex.text-capitalize.user_text", timeout=7000
                 )
                 await message.answer("🏫 FUO Home Page Loaded")
                 if await page.locator("#kt_aside_mobile_toggle").is_visible():
@@ -532,6 +533,7 @@ async def login(
 ):
     # await message.answer("Login Started")
     MAX_RETRIES = 5
+    session_expired = False
     while True:
         try:
             page = await context.new_page()
@@ -579,6 +581,10 @@ async def login(
                                 await message.answer("🏫 FUO Home Page Loaded")
                                 await message.answer("Getting your profile details...🔃") 
                         except TimeoutError:
+                                if page.get_by_text('You are not signed in or your session has expired.'):
+                                    session_expired = True
+                                    await message.answer('Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖')
+                                    break
                                 await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
                                 await bot.send_photo(
                                     chat_id=message.chat.id,
@@ -592,6 +598,8 @@ async def login(
                     # await page.wait_for_selector(
                     #     "span.student_name", timeout=800000, state="visible"
                     # )
+                    if session_expired:
+                        continue
                     await page.screenshot(path=Path(BASE_DIR, "screenshot.png"))
                     await bot.send_photo(
                         chat_id=message.chat.id,
