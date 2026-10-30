@@ -141,14 +141,14 @@ async def download_results(
     await message.answer("📊 Fetching Results....")
     while True:
         try:
-            await menu.get_by_text("Courses", exact=True).click(timeout=800000)
+            await menu.get_by_text("Courses", exact=True).click(timeout=60000)
             print("Courses clicked")
-            await menu.get_by_text("View Results", exact=True).click(timeout=800000)
+            await menu.get_by_text("View Results", exact=True).click(timeout=60000)
             await message.answer("View Results clicked")
-            await page.wait_for_selector(".selection", timeout=800000)
+            await page.wait_for_selector(".selection", timeout=60000)
             await message.answer(f"🔍 Results Found")
             await page.click(".selection")
-            await page.wait_for_selector("li[role='option']", timeout=800000)
+            await page.wait_for_selector("li[role='option']", timeout=60000)
             options = page.locator("li[role='option']")
             if await options.count() <= 1:
                 await message.answer(
@@ -166,9 +166,9 @@ async def download_results(
     options_clicked = list(set([]))
     pdf_page = await context.new_page()
     await pdf_page.goto(session_url, wait_until="domcontentloaded")
-    for i in reversed(range(1, await options.count())):
+    for i in (range(1, await options.count())):
         print(options_clicked)
-        session = await options.nth(i).inner_text(timeout=800000)
+        session = await options.nth(i).inner_text(timeout=60000)
         await message.answer(
             f" 🔎 Found your result for {session} session about to download"
         )
@@ -176,7 +176,7 @@ async def download_results(
             await options.nth(i).click()
             while True:
                 try:
-                    await page.wait_for_selector(".highest_gpa", timeout=800000)
+                    await page.wait_for_selector(".highest_gpa", timeout=60000)
                     if (
                         len(
                             await page.locator(".highest_gpa").text_content(
