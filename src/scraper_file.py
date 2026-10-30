@@ -39,10 +39,10 @@ async def get_menu(
             await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
             await message.answer('Menu page loaded')
             if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=70000) is None:
+                await message.answer('Looking for your profile details...')
                 await page.wait_for_selector(
                     ".d-inline-flex.text-capitalize.user_text", timeout=7000
                 )
-                await message.answer("🏫 FUO Home Page Loaded")
                 if await page.locator("#kt_aside_mobile_toggle").is_visible():
                     await page.click("#kt_aside_mobile_toggle")
                     print("Toggle clicked")
@@ -55,10 +55,10 @@ async def get_menu(
             await message.answer("🤖 Side Menu Clicked")
             return menu, page
         except TimeoutError as e:
-            await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
+            await page.screenshot(path=Path(BASE_DIR, "error1-screenshot.png"))
             await bot.send_photo(
                 chat_id=message.chat.id,
-                photo=FSInputFile(Path(BASE_DIR, "error-screenshot.png")),
+                photo=FSInputFile(Path(BASE_DIR, "error1-screenshot.png")),
                 caption=e
             )
             await message.answer("❌ Network Timeout Retrying...")
