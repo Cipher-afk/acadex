@@ -38,7 +38,7 @@ async def get_menu(
             await message.answer('Getting Menu...')
             await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
             await message.answer('Menu page loaded')
-            if not await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=70000):
+            if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=70000) is None:
                 await page.wait_for_selector(
                     ".d-inline-flex.text-capitalize.user_text", timeout=7000
                 )
