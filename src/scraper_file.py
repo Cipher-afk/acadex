@@ -571,10 +571,10 @@ async def login(
                     if await page.wait_for_selector(
                         ".user_text", timeout=180000, state="visible"
                     ):
-                        if await page.locator(".row.g-5.myfeelist").is_visible():
+                        if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
                             await message.answer("🏫 FUO Home Page Loaded")
                             await message.answer("Getting your profile details...🔃")
-                        elif await page.locator("span.student_name").is_visible():
+                        elif await page.wait_for_selector("span.student_name",state='visible',timeout=80000):
                             await message.answer("🏫 FUO Home Page Loaded")
                             await message.answer("Getting your profile details...🔃") 
                         else:
