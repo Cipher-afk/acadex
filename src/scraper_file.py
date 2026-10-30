@@ -13,7 +13,6 @@ from aiogram.types import Message, FSInputFile
 from aiogram import Bot
 import os
 from tasks import scraping_tasks
-import re
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -527,12 +526,6 @@ async def download_admmission_forms(
         await message.answer(f"Error occured while getting documents try again")
         raise
 
-async def user_text_appears(loc:Locator,timeout=5000):
-    try:
-        loc.wait_for(state='visible',timeout=timeout)
-        return True
-    except TimeoutError:
-        return False
 
 async def login(
     context: BrowserContext, username: str, password: str, message: Message, bot: Bot
@@ -575,12 +568,17 @@ async def login(
                     await message.answer("Redirecting...")
 
                     # print("redirecting you to home page")
-                    locator = page.locator(".user_text").filter(has_text=re.compile(r"\S"))
-                    if await user_text_appears(loc=locator):
-                        await message.answer("🏫 FUO Home Page Loaded")
-                        await message.answer("Getting your profile details...🔃")
-                    else:
-                        raise TimeoutError("User text not found on the page")
+                    if await page.wait_for_selector(
+                        ".user_text", timeout=180000, state="visible"
+                    ):
+                        if await page.locator(".row.g-5.myfeelist").is_visible():
+                            await message.answer("🏫 FUO Home Page Loaded")
+                            await message.answer("Getting your profile details...🔃")
+                        elif await page.locator("span.student_name").is_visible():
+                            await message.answer("🏫 FUO Home Page Loaded")
+                            await message.answer("Getting your profile details...🔃") 
+                        else:
+                            raise TimeoutError('Page not loaded properly')
                     # await page.wait_for_selector(
                     #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
                     # )
@@ -602,7 +600,7 @@ async def login(
                         )
                         return False
                     await message.answer(
-                        f"❌ Network Timeout Retrying to redirect to home page attempt {attempt} of {MAX_RETRIES}...."
+                        f"❌ Page not loaded properly attempting retry {attempt} of {MAX_RETRIES}...."
                     )
                     try:
                         await page.reload(wait_until="domcontentloaded", timeout=180000)
