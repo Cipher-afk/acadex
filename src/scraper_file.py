@@ -35,8 +35,8 @@ async def get_menu(
     while True:
         try:
             page = await context.new_page()
-            await page.goto(session_url, timeout=8000000)
-            if not await page.locator(".row.g-5.myfeelist").is_visible():
+            await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
+            if not await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
                 await page.wait_for_selector(
                     ".d-inline-flex.text-capitalize.user_text", timeout=80000
                 )
