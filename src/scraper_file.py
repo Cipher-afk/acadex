@@ -571,18 +571,20 @@ async def login(
                     if await page.wait_for_selector(
                         ".user_text", timeout=180000, state="visible"
                     ):
+                    try:
                         if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
                             await message.answer("🏫 FUO Home Page Loaded")
                             await message.answer("Getting your profile details...🔃")
                         elif await page.wait_for_selector("span.student_name",state='visible',timeout=80000):
                             await message.answer("🏫 FUO Home Page Loaded")
                             await message.answer("Getting your profile details...🔃") 
-                        else:
+                    except TimeoutError:
                             await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
                             await bot.send_photo(
                                 chat_id=message.chat.id,
                                 photo=FSInputFile(Path(BASE_DIR, "error-screenshot.png")),
                             )
+                            await message.answer('Page not loaded properly')
                             raise TimeoutError('Page not loaded properly')
                     # await page.wait_for_selector(
                     #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
