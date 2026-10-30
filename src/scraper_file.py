@@ -568,12 +568,14 @@ async def login(
                     await message.answer("Redirecting...")
 
                     # print("redirecting you to home page")
-                    if await page.wait_for_selector(".user_text", timeout=180000):
+                    if await page.wait_for_selector(
+                        ".user_text", timeout=180000, state="visible"
+                    ):
                         await message.answer("🏫 FUO Home Page Loaded")
                         await message.answer("Getting your profile details...🔃")
-                    await page.wait_for_selector(
-                        ".d-inline-flex.text-capitalize.user_text", timeout=180000
-                    )
+                    # await page.wait_for_selector(
+                    #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
+                    # )
                     # await page.wait_for_selector(
                     #     "span.student_name", timeout=800000, state="visible"
                     # )
