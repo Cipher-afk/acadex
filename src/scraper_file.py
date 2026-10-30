@@ -37,6 +37,7 @@ async def get_menu(
             page = await context.new_page()
             await message.answer('Getting Menu...')
             await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
+            await message.answer('Menu page loaded')
             if not await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=70000):
                 await page.wait_for_selector(
                     ".d-inline-flex.text-capitalize.user_text", timeout=7000
@@ -53,7 +54,13 @@ async def get_menu(
             menu = page.locator("div.menu-item.menu-accordion")
             await message.answer("🤖 Side Menu Clicked")
             return menu, page
-        except TimeoutError:
+        except TimeoutError as e:
+            await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
+            await bot.send_photo(
+                chat_id=message.chat.id,
+                photo=FSInputFile(Path(BASE_DIR, "error-screenshot.png")),
+                caption=e
+            )
             await message.answer("❌ Network Timeout Retrying...")
             await page.close()
             continue
