@@ -38,12 +38,12 @@ async def get_menu(
                     # await message.answer('Getting Menu...')
                     # await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
             await message.answer('Menu page loaded')
-            try:
-                await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=120000)
-            except TimeoutError:
-                await page.wait_for_selector("span.matric_no", timeout=120000,state='visible')
-                mat_num = await page.locator("span.matric_no").inner_text()
-                await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
+            # try:
+            #     await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=120000)
+            # except TimeoutError:
+            #     await page.wait_for_selector("span.matric_no", timeout=120000,state='visible')
+            #     mat_num = await page.locator("span.matric_no").inner_text()
+            #     await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
                 # await message.answer('Looking for your profile details...')
             # await page.wait_for_selector(
             #     ".user_text", timeout=7000,state='visible'
