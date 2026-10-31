@@ -136,9 +136,9 @@ async def download_results(
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
-    if fee_blocked:
-        return
+    # fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
+    # if fee_blocked:
+    #     return
     await message.answer("📊 Fetching Results....")
     await page.screenshot(path=Path(BASE_DIR, "error1-screenshot.png"))
     await bot.send_photo(
