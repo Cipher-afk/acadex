@@ -30,18 +30,18 @@ async def is_fee_blocked(page: Page, bot: Bot, message: Message):
 
 
 async def get_menu(
-    session_url: str, bot: Bot, context: BrowserContext, message: Message
+    session_url: str,page:Page, bot: Bot, context: BrowserContext, message: Message
 ):
     while True:
         try:
-            page = await context.new_page()
-            await message.answer('Getting Menu...')
-            await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
+                    # page = await context.new_page()
+                    # await message.answer('Getting Menu...')
+                    # await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
             await message.answer('Menu page loaded')
             try:
-                await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000)
+                await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=120000)
             except TimeoutError:
-                await page.wait_for_selector("span.matric_no", timeout=50000,state='visible')
+                await page.wait_for_selector("span.matric_no", timeout=120000,state='visible')
                 mat_num = await page.locator("span.matric_no").inner_text()
                 await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
                 # await message.answer('Looking for your profile details...')
@@ -71,7 +71,7 @@ async def download_payment_receipts(
     session_url: str, context: BrowserContext, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context, message=message
+        session_url=session_url, page=page, bot=bot, context=context, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -134,7 +134,7 @@ async def download_results(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context, message=message
+        session_url=session_url, page=page, bot=bot, context=context, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -281,7 +281,7 @@ async def get_result_summary(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context, message=message
+        session_url=session_url, page=page, bot=bot, context=context, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -324,7 +324,7 @@ async def download_courses(
     level: int = None,
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context, message=message
+        session_url=session_url, page=page, bot=bot, context=context, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -445,7 +445,7 @@ async def download_biodata(
     bot: Bot,
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context, message=message
+        session_url=session_url, bot=bot, context=context,page=page, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -500,7 +500,7 @@ async def download_admmission_forms(
     context: BrowserContext, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
-        context=context, bot=bot, session_url=session_url, message=message
+        context=context, bot=bot, session_url=session_url, message=message, page=page
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -620,7 +620,7 @@ async def login(
                     )
                     session_url = page.url
                     await page.close()
-                    return session_url
+                    return session_url,page
                 except TimeoutError:
                     if attempt == MAX_RETRIES:
                         await message.answer(
@@ -664,7 +664,7 @@ async def main(
             print("None")
             session_url = await get_url()
         else:
-            session_url = await login(
+            session_url,page = await login(
                 context=context,
                 username=username,
                 password=password,
@@ -681,6 +681,7 @@ async def main(
                 if download_info == "payment_receipts":
                     documents = await download_payment_receipts(
                         session_url=session_url,
+                        page=page,
                         context=context,
                         message=message,
                         bot=bot,
@@ -688,6 +689,7 @@ async def main(
                 elif download_info == "results":
                     documents = await download_results(
                         context=context,
+                        page=page,
                         session_url=session_url,
                         message=message,
                         bot=bot,
@@ -695,6 +697,7 @@ async def main(
                 elif download_info == "result_summary":
                     documents = await get_result_summary(
                         context=context,
+                        page=page,
                         session_url=session_url,
                         message=message,
                         bot=bot,
@@ -702,6 +705,7 @@ async def main(
                 elif download_info == "courses":
                     documents = await download_courses(
                         context=context,
+                        page=page,
                         session_url=session_url,
                         message=message,
                         bot=bot,
@@ -710,6 +714,7 @@ async def main(
                 elif download_info == "biodata":
                     await download_biodata(
                         context=context,
+                        page=page,
                         session_url=session_url,
                         message=message,
                         bot=bot,
@@ -719,6 +724,7 @@ async def main(
                 elif download_info == "admission_forms":
                     await download_admmission_forms(
                         context=context,
+                        page=page,
                         session_url=session_url,
                         message=message,
                         bot=bot,
