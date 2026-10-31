@@ -68,7 +68,7 @@ async def get_menu(
 
 
 async def download_payment_receipts(
-    session_url: str, context: BrowserContext, message: Message, bot: Bot
+    session_url: str, context: BrowserContext, message: Message, bot: Bot, page: Page
 ):
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
@@ -131,7 +131,7 @@ async def download_payment_receipts(
 
 
 async def download_results(
-    context: BrowserContext, session_url: str, message: Message, bot: Bot
+    context: BrowserContext,page:Page, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
@@ -278,7 +278,7 @@ async def download_results(
 
 
 async def get_result_summary(
-    context: BrowserContext, session_url: str, message: Message, bot: Bot
+    context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page
 ):
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
@@ -321,6 +321,7 @@ async def download_courses(
     session_url: str,
     message: Message,
     bot: Bot,
+    page:Page,
     level: int = None,
 ):
     menu, page = await get_menu(
@@ -440,6 +441,7 @@ async def download_courses(
 
 async def download_biodata(
     context: BrowserContext,
+    page: Page,
     session_url: str,
     message: Message,
     bot: Bot,
@@ -497,7 +499,7 @@ async def download_biodata(
 
 
 async def download_admmission_forms(
-    context: BrowserContext, session_url: str, message: Message, bot: Bot
+    context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page
 ):
     menu, page = await get_menu(
         context=context, bot=bot, session_url=session_url, message=message, page=page
