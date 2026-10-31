@@ -140,11 +140,6 @@ async def download_results(
     # if fee_blocked:
     #     return
     await message.answer("📊 Fetching Results....")
-    await page.screenshot(path=Path(BASE_DIR, "error1-screenshot.png"))
-    await bot.send_photo(
-        chat_id=message.chat.id,
-        photo=FSInputFile(Path(BASE_DIR, "error1-screenshot.png"))
-    )
     while True:
         try:
             await menu.get_by_text("Courses", exact=True).click(timeout=60000)
@@ -153,6 +148,11 @@ async def download_results(
             await message.answer("View Results clicked")
             await page.wait_for_selector(".selection", timeout=60000)
             await message.answer(f"🔍 Results Found")
+            await page.screenshot(path=Path(BASE_DIR, "result-screenshot.png"))
+            await bot.send_photo(
+                chat_id=message.chat.id,
+                photo=FSInputFile(Path(BASE_DIR, "result-screenshot.png"))
+            )
             await page.click(".selection")
             await page.wait_for_selector("li[role='option']", timeout=60000)
             options = page.locator("li[role='option']")
