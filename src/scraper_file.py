@@ -149,11 +149,17 @@ async def download_results(
             await page.wait_for_selector(".selection", timeout=60000)
             await message.answer(f"🔍 Results Found")
             await page.screenshot(path=Path(BASE_DIR, "result-screenshot.png"))
+            # await bot.send_photo(
+            #     chat_id=message.chat.id,
+            #     photo=FSInputFile(Path(BASE_DIR, "result-screenshot.png"))
+            # )
+            await page.click(".selection")
+            await page.screenshot(path=Path(BASE_DIR, "result-screenshot.png"))
             await bot.send_photo(
                 chat_id=message.chat.id,
-                photo=FSInputFile(Path(BASE_DIR, "result-screenshot.png"))
+                photo=FSInputFile(Path(BASE_DIR, "result-screenshot.png")),
+                caption='Result page'
             )
-            await page.click(".selection")
             await page.wait_for_selector("li[role='option']", timeout=60000)
             options = page.locator("li[role='option']")
             if await options.count() <= 1:
@@ -163,7 +169,7 @@ async def download_results(
                 continue
             else:
                 break
-        except TimeoutError:
+        except TimeoutError:  
             await message.answer("❌ Network Timeout Retrying...")
             continue
 
