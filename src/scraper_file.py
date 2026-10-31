@@ -621,7 +621,6 @@ async def login(
                         photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
                     )
                     session_url = page.url
-                    await page.close()
                     return session_url,page
                 except TimeoutError:
                     if attempt == MAX_RETRIES:
