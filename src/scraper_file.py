@@ -39,7 +39,7 @@ async def get_menu(
             await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
             await message.answer('Menu page loaded')
             try:
-                await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
+                await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000)
             except TimeoutError:
                 await page.wait_for_selector("span.matric_no", timeout=50000,state='visible')
                 mat_num = await page.locator("span.matric_no").inner_text()
