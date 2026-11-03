@@ -73,9 +73,9 @@ async def download_payment_receipts(
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
     )
-    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
-    if fee_blocked:
-        return
+    # fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
+    # if fee_blocked:
+    #     return
     await menu.get_by_text("Payments", exact=True).click(timeout=800000)
     await message.answer("🔍 Looking for your receipts....")
     await menu.get_by_text("Payment Receipts", exact=True).click(timeout=800000)
