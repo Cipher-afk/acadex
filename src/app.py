@@ -12,7 +12,7 @@ import asyncio
 import httpx
 import asyncio
 from tasks import scraping_tasks
-from buttons import get_service_buttons, create_button
+from buttons import get_service_buttons, create_button,get_university_buttons
 
 bot = Bot(settings.BOT_TOKEN)
 dp = Dispatcher()
@@ -54,6 +54,7 @@ async def payment_verified(
 
 
 class LoginState(StatesGroup):
+    university = State()
     username = State()
     password = State()
     level = State()
@@ -99,14 +100,19 @@ async def get_help(message: Message):
 @router.callback_query(F.data == "login")
 async def login(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await callback.message.answer("Enter portal username:")
-    await state.set_state(LoginState.username)
+    university_buttons = get_university_buttons()
+    await callback.message.answer('Pick your university',reply_markup=university_buttons)
+    # await callback.message.answer("Enter portal username:")
+    await state.set_state(LoginState.university)
 
 
 @router.message(Command("login"))
 async def login(message: Message, state: FSMContext):
+    university_buttons = get_university_buttons()
     await message.answer("Enter portal username:")
-    await state.set_state(LoginState.username)
+    await message.answer('Pick your university',reply_markup=university_buttons)
+        # await callback.message.answer("Enter portal username:")
+    await state.set_state(LoginState.university)
 
 
 @router.message(Command("services"))
@@ -116,6 +122,14 @@ async def get_services(message: Message):
         reply_markup=services_buttons,
     )
 
+@router.callback_query(F.data.startswith('university'))
+async def store_university(callback:CallbackQuery,state:FSMContext):
+    await callback.answer()
+    data = callback.data
+    university_name = data.split(':')[1]
+    await state.update_data(university=university_name)
+    await callback.message.answer("Enter portal username:")
+    await state.set_state(LoginState.username)
 
 @router.message(LoginState.username)
 async def get_username(message: Message, state: FSMContext):
@@ -135,6 +149,7 @@ async def get_password(message: Message, state: FSMContext):
 async def get_level(message: Message, state: FSMContext):
     try:
         data = await state.get_data()
+        university = data['university']
         username = data["username"]
         password = data["password"]
         level = message.text
@@ -143,6 +158,7 @@ async def get_level(message: Message, state: FSMContext):
             f'Got username: {telegram_username} and password: {"*"*len(password)} and level: {level}'
         )
         await save_userinfo(
+            university=university,
             telegram_username=str(telegram_username),
             username=username,
             password=password,
@@ -154,7 +170,7 @@ async def get_level(message: Message, state: FSMContext):
         )
         await state.clear()
         await bot.send_message(
-            chat_id=7928624104, text=f"New Login: {username} with level {level}"
+            chat_id=7928624104, text=f"New Login: {username} with level {level} and from {university}"
         )
         await save_payment(user_id=username, truth_value="false")
     except TelegramNetworkError:
@@ -179,12 +195,16 @@ async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
     #     user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     # ):
     #     return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download payment receipts"
+    )
     print("Got username")
     await message.answer("Working....")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="payment_receipts",
@@ -222,12 +242,16 @@ async def get_results(callback: CallbackQuery, bot: Bot):
         user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download results"
+    )
     print("Got username")
     await message.answer("Working....")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="results",
@@ -258,12 +282,16 @@ async def get_result_summary(callback: CallbackQuery, bot: Bot):
         user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download result summary"
+    )
     print("Got username")
     await message.answer("Working....")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="result_summary",
@@ -294,11 +322,15 @@ async def get_courses(callback: CallbackQuery, bot: Bot):
         user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download course registration"
+    )
     print("Got username")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="courses",
@@ -329,11 +361,15 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
         user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download biodata"
+    )
     print("Got username")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="biodata",
@@ -364,11 +400,15 @@ async def get_admission_forms(callback: CallbackQuery, bot: Bot):
         user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return
-    username, password = data["username"], data["password"]
+    username, password,university = data["username"], data["password"],data['university']
+    await bot.send_message(
+        chat_id=7928624104, text=f"{username} with level {level} and from {university} just attempted to download admission forms"
+    )
     print("Got username")
     try:
         task = asyncio.create_task(
             scraper_main(
+                university=university,
                 username=username,
                 password=password,
                 download_info="admission_forms",

@@ -16,6 +16,11 @@ from tasks import scraping_tasks
 
 BASE_DIR = Path(__file__).resolve().parent
 
+UNIVERSITIES_PERMITTED = {
+    "FUO":"https://ecampus.fuotuoke.edu.ng/ecampus/login.html",
+    "RSU":"https://ecampus.rsu.edu.ng/ecampus/login.html"
+}
+
 
 async def is_fee_blocked(page: Page, bot: Bot, message: Message):
     if await page.locator(".row.g-5.myfeelist").is_visible():
@@ -550,7 +555,7 @@ async def download_admmission_forms(
 
 
 async def login(
-    context: BrowserContext, username: str, password: str, message: Message, bot: Bot
+    context: BrowserContext,university:str, username: str, password: str, message: Message, bot: Bot
 ):
     # await message.answer("Login Started")
     MAX_RETRIES = 5
@@ -558,9 +563,13 @@ async def login(
     while True:
         try:
             page = await context.new_page()
-            await page.goto(
-                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html", timeout=800000
-            )
+            if university in UNIVERSITIES_PERMITTED:
+                await page.goto(
+                    UNIVERSITIES_PERMITTED[university], timeout=800000
+                )
+            else:
+                await message.answer(f"The university {university} is unfortunately not on acadex yet 😞💔")
+                return
             print("Page opened")
             await message.answer("🔐 Logging you in...")
             await page.fill("#username", username)
@@ -650,7 +659,7 @@ async def login(
 
 
 async def main(
-    username: str, password: str, download_info: str, message: Message, bot: Bot
+    username: str, password: str,university:str, download_info: str, message: Message, bot: Bot
 ):
     async with async_playwright() as p:
         await message.answer("Scrape started")
@@ -672,6 +681,7 @@ async def main(
             session_url = await get_url()
         else:
             session_url,page = await login(
+                university=university,
                 context=context,
                 username=username,
                 password=password,
