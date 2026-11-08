@@ -53,6 +53,10 @@ class PaymentService:
                 chat_id=int(telegram_id), text="Payment Verified Successfully"
             )
             return {"Payed": "Successfully"}
+        else:
+            await bot.send_message(
+                chat_id=int(telegram_id), text="Payment Failed Try Again"
+            )
 
     async def get_user(self, user_id: str, session: AsyncSession):
         statement = select(User).where(user_id == User.user_id)

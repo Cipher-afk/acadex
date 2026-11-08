@@ -18,3 +18,10 @@ def create_button(text: str, callback_data: str):
     builder = InlineKeyboardBuilder()
     builder.button(text=text, callback_data=callback_data)
     return builder.as_markup()
+
+def get_university_buttons():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Federal University Of Otueke", callback_data="university:FUO")
+    builder.button(text="Rivers State University Of Science and Technology", callback_data="university:RSU")
+    builder.adjust(2)
+    return builder.as_markup()
