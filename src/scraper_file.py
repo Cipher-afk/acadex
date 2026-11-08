@@ -577,11 +577,7 @@ async def login(
             await page.get_by_text("Continue").click()
             print("continue clicked")
             await message.answer("Password page loading...")
-            await page.wait_for_url(
-                UNIVERSITIES_PERMITTED[university],
-                wait_until="domcontentloaded",
-                timeout=60000,
-            )
+            await page.wait_for_selector('#password',timeout=60000)
             await page.fill("#password", password)
             await message.answer("Password entered")
             await page.click("#btn_login", timeout=60000)
