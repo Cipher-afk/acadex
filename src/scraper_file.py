@@ -578,7 +578,7 @@ async def login(
             print("continue clicked")
             await message.answer("Password page loading...")
             await page.wait_for_url(
-                "https://ecampus.fuotuoke.edu.ng/ecampus/login.html#",
+                UNIVERSITIES_PERMITTED[university],
                 wait_until="domcontentloaded",
                 timeout=60000,
             )
