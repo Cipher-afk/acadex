@@ -48,7 +48,7 @@ class PaymentService:
             await self.update_info(
                 telegram_id=telegram_id, info={"is_paid": True}, session=session
             )
-            await save_payment(user_id=user_id, truth_value="truth")
+            await save_payment(user_id=user_id, truth_value="true")
             await bot.send_message(
                 chat_id=int(telegram_id), text="Payment Verified Successfully"
             )
@@ -88,7 +88,7 @@ class PaymentService:
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         today = datetime.now()
-        if date.today() > user.expiry or user.is_paid == False:
+        if today > user.expiry or user.is_paid == False:
             user.is_paid = False
             await session.commit()
             await session.refresh(user)

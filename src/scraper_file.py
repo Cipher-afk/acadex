@@ -194,11 +194,12 @@ async def download_results(
             while True:
                 try:
                     await page.wait_for_selector(".highest_gpa", timeout=60000)
-                    if (
-                        len(
-                            await page.locator(".highest_gpa").text_content(
+                    highest_gpa = await page.locator(".highest_gpa").text_content(
                                 timeout=800000
                             )
+                    if (
+                        len(
+                            highest_gpa
                         )
                         > 1
                     ):
@@ -210,6 +211,7 @@ async def download_results(
                         await options.nth(i).click()
                         continue
                     print("Found highest gpa")
+                    await message.answer(f'Your Highest GPA is {highest_gpa}')
                     semesters = page.locator("li.nav-item")
                     semester_count = await semesters.count()
                     print(semester_count)
@@ -584,7 +586,7 @@ async def login(
             await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=60000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=30000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
@@ -601,10 +603,10 @@ async def login(
                     ):
                         try:
                             if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
-                                await message.answer("🏫 FUO Home Page Loaded")
+                                await message.answer(f"🏫 {university} Home Page Loaded")
                                 await message.answer("Getting your profile details...🔃")
                             elif await page.wait_for_selector("span.student_name",state='visible',timeout=80000):
-                                await message.answer("🏫 FUO Home Page Loaded")
+                                await message.answer(f"🏫 {university} Home Page Loaded")
                                 await message.answer("Getting your profile details...🔃") 
                         except TimeoutError:
                                 if page.get_by_text('You are not signed in or your session has expired.'):
