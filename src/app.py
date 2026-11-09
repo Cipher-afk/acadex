@@ -42,6 +42,7 @@ async def payment_verified(
                         "level": str(level),
                     },
                 )
+                print(res.status_code,res.text,flush=True)
                 payment_link = res.json()["payment_link"]
                 if payment_link is not None:
                     message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
