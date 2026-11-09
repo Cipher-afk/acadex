@@ -48,7 +48,7 @@ class PaymentService:
             await self.update_info(
                 telegram_id=telegram_id, info={"is_paid": True}, session=session
             )
-            await save_payment(user_id=user_id, truth_value="true")
+            await save_payment(user_id=user_id, truth_value="truth")
             await bot.send_message(
                 chat_id=int(telegram_id), text="Payment Verified Successfully"
             )
