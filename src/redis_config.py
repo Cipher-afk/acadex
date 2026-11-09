@@ -44,7 +44,7 @@ async def save_payment(user_id: str, truth_value: str):
 
 async def get_payment(user_id: str):
     paid = await red.get(f"paid:{user_id}")
-    return True if paid == "true" else False
+    return True if paid == "truth" else False
 
 
 if __name__ == "__main__":
