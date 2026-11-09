@@ -88,7 +88,7 @@ class PaymentService:
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         today = datetime.now()
-        if today > user.expiry or user.is_paid == False:
+        if today.date() > user.expiry.date() or user.is_paid == False:
             user.is_paid = False
             await session.commit()
             await session.refresh(user)
