@@ -1,5 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
+from typing import List
 
 
 def get_service_buttons():
@@ -25,3 +26,25 @@ def get_university_buttons():
     builder.button(text="Rivers State University Of Science and Technology", callback_data="university:RSU")
     builder.adjust(2)
     return builder.as_markup()
+
+def get_access_buttons():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='signup',callback_data='signup')
+    builder.button(text='login',callback_data='marketer_login')
+    builder.adjust(2)
+    return builder.as_markup()
+
+def get_withdraw_refresh_buttons(gain_made:int):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='withdraw',callback_data=f'withdraw:{gain_made}')
+    builder.button(text='refresh',callback_data='refresh_users')
+    builder.adjust(2)
+    return builder.as_markup()
+
+def confirm_retry_buttons(gain_made:int):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Confirm Pay',callback_data=f'confirm')
+    builder.button(text='Edit Details',callback_data=f'withdraw:{gain_made}')
+    builder.adjust(2)
+    return builder.as_markup()
+

@@ -9,10 +9,11 @@ import asyncio
 from redis_config import get_url, store_url
 from pathlib import Path
 from PIL import Image
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile,CallbackQuery
 from aiogram import Bot
 import os
 from tasks import scraping_tasks
+from buttons import create_session_buttons
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -290,6 +291,8 @@ async def download_results(
             pass
 
 
+
+
 async def get_result_summary(
     context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page
 ):
@@ -554,6 +557,10 @@ async def download_admmission_forms(
     except Exception as e:
         await message.answer(f"Error occured while getting documents try again")
         raise
+
+
+# async def pay_fee_blocks(context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page):
+#     pass
 
 
 async def login(

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     PAYMENT_SECRET_KEY: str
     # PAYSTACK_LINK: str 
     DOMAIN_NAME: str
+    ADMINS_CODE:str
+    ADMINS_TELEGRAM_ID:int
     model_config = SettingsConfigDict(env_file="./.env", extra="ignore")
 
 
