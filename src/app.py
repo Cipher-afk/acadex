@@ -406,7 +406,7 @@ async def get_level(message: Message, state: FSMContext):
         )
         user_info = InitPayment(user_id=username,telegram_id=str(telegram_username),level=level,referrer=referrer )
         async with get_session_ctx() as session:
-            user = payment_service.get_user_by_telegram_id(telegram_id=telegram_id,session=session)
+            user = payment_service.get_user_by_telegram_id(telegram_id=str(telegram_username),session=session)
         if user is None:
             await payment_service.create_user(user_info=user_info)
         await message.answer(
