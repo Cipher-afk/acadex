@@ -209,7 +209,7 @@ async def verify_admin_code(message:Message):
 @router.callback_query(F.data == 'admin_marketer_login')
 async def admin_marketer_login(callback:CallbackQuery,state:FSMContext):
     await callback.answer()
-    telegram_id = callback.message.chat.id
+    telegram_id = str(callback.message.chat.id)
     payment_link_data = await payment_service.generate_marketer_payment_link(telegram_id=telegram_id)
     payment_link = payment_link_data['payment_link']
     if payment_link is not None:
@@ -222,7 +222,7 @@ async def admin_marketer_login(callback:CallbackQuery,state:FSMContext):
 @router.callback_query(F.data == 'marketer_login')
 async def marketer_login(callback:CallbackQuery,state:FSMContext):
     await callback.answer()
-    telegram_id = callback.message.chat.id
+    telegram_id = str(callback.message.chat.id)
     payment_link_data = await payment_service.generate_marketer_payment_link(telegram_id=telegram_id)
     payment_link = payment_link_data['payment_link']
     if payment_link is not None:
@@ -344,7 +344,7 @@ Amount: {amount_to_withdraw} naira
 @router.callback_query(F.data == 'refresh_users')
 async def refresh_data(callback:CallbackQuery):
     await callback.answer()
-    telegram_id = callback.message.chat.id
+    telegram_id = str(callback.message.chat.id)
     marketer = await payment_service.get_marketer_by_telegram_id(telegram_id=telegram_id)
     await get_fresh_market_info(callback=callback,marketer=marketer)
 
@@ -366,7 +366,7 @@ async def get_username(message: Message, state: FSMContext):
 @router.message(LoginState.password)
 async def get_password(message: Message, state: FSMContext):
     await state.update_data(password=message.text)
-    telegram_id = message.chat.id
+    telegram_id = str(message.chat.id)
     async with get_session_ctx() as session:
         user = await payment_service.get_user_by_telegram_id(telegram_id=telegram_id,session=session)
     if user is not None:
@@ -374,7 +374,7 @@ async def get_password(message: Message, state: FSMContext):
             await message.answer("Enter Current Level[Just the number (eg. 100)]: ")
             await state.set_state(LoginState.referrer)
             return
-    await message.answer("Enter Your referrer name or none if you don't have one")
+        await message.answer("Enter Your referrer name or none if you don't have one")
     await state.set_state(LoginState.referrer)
 
 @router.message(LoginState.referrer)
@@ -392,7 +392,7 @@ async def get_level(message: Message, state: FSMContext):
         password = data["password"]
         referrer = data['referrer']
         level = message.text
-        telegram_username = message.chat.id
+        telegram_username = str(message.chat.id)
         print(
             f'Got username: {telegram_username} and password: {"*"*len(password)} and level: {level}'
         )
