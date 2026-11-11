@@ -381,7 +381,7 @@ async def get_password(message: Message, state: FSMContext):
 async def get_referrer(message:Message,state:FSMContext):
     await state.update_data(referrer=message.text)
     await message.answer("Enter Current Level[Just the number (eg. 100)]: ")
-    await state.set_state(LoginState.referrer)
+    await state.set_state(LoginState.level)
 
 @router.message(LoginState.level)
 async def get_level(message: Message, state: FSMContext):
@@ -390,7 +390,7 @@ async def get_level(message: Message, state: FSMContext):
         university = data['university']
         username = data["username"]
         password = data["password"]
-        referrer = data['referrer']
+        referrer = data['referrer'] if referrer not in ['none','None','NONE'] else None
         level = message.text
         telegram_username = str(message.chat.id)
         print(
