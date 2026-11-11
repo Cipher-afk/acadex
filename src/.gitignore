@@ -5,7 +5,3 @@ __init__.py
 .pyc
 __pycache__
 *.db
-migrations
-*.mako
-env.py
-*.ini

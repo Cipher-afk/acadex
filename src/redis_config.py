@@ -22,10 +22,10 @@ async def get_url():
     return session_url
 
 
-async def save_userinfo(telegram_username: str, username, password, level,university):
+async def save_userinfo(telegram_username: str, username, password, level,university,referrer):
     await red.hset(
         telegram_username,
-        mapping={f"username": username, f"password": password, "level": level,"university":university},
+        mapping={f"username": username, f"password": password, "level": level,"university":university,"referrer":referrer}
     )
 
 

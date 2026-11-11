@@ -27,7 +27,6 @@ app = FastAPI(lifespan=lifespan)
 async def check_health():
     return {"status": "ok"}
 
-
 @app.post("/init-payment")
 async def initialize_payment(
     payload: InitPayment, session: AsyncSession = Depends(get_session)
@@ -37,7 +36,7 @@ async def initialize_payment(
     )
     user_id = await service.get_user(user_id=payload.user_id, session=session)
     if user is None and user_id is None:
-        user = await service.create_user(user_info=payload, session=session)
+        user = await service.create_user(user_info=payload)
     else:
         await service.update_info(
             telegram_id=user.telegram_id,
@@ -50,35 +49,15 @@ async def initialize_payment(
         )
         == True
     ):
-        headers = {
-            "Authorization": f"Bearer {settings.PAYMENT_SECRET_KEY}",
-            "Content-type": "application/json",
-        }
-
-        data = {
-            "email": f"ajaokudos34@gmail.com",
-            "amount": 1000 * 100,
-            "channels":['bank_transfer'],
-            "metadata": {
+        metadata = {
+                'type':'user',
                 "telegram_id": user.telegram_id,
                 "level": user.level,
                 "user_id": user.user_id,
-            },
-        }
-
-        async with httpx.AsyncClient(verify=False) as client:
-            res = await client.post(
-                "https://api.paystack.co/transaction/initialize",
-                headers=headers,
-                json=data,
-                timeout=100,
-            )
-            result = res.json()
-            if not result["status"]:
-                raise HTTPException(status_code=400, detail=result["message"])
-            payment_link = result["data"]["authorization_url"]
-            return {"payment_link": payment_link}
-    return {"payment_link": None}
+            }
+        payment_link_data = await service.generate_payment_link(amount=1000,metadata=metadata)
+        return payment_link_data
+    return {'payment_link':None}
 
 
 @app.post("/webhooks/paystack")
