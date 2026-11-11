@@ -404,7 +404,7 @@ async def get_level(message: Message, state: FSMContext):
             level=str(level),
             referrer=referrer if referrer is not None else 'none'
         )
-        user_info = InitPayment(user_id=username,telegram_id=str(telegram_username),level=level,referrer=referrer)
+        user_info = InitPayment(user_id=username,telegram_id=str(telegram_username),level=level,referrer=referrer )
         await payment_service.create_user(user_info=user_info)
         await message.answer(
             "Credentials Saved Pick a service to continue".title(),
