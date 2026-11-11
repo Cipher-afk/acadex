@@ -278,7 +278,7 @@ async def get_password(message:Message,state:FSMContext):
     marketer = await payment_service.create_marketer(marketer_model=marketer_model)
     await get_marketer_info(marketer=marketer,state=state,message=message)
 
-@router.callback_quey(F.data.startswith('withdraw'))
+@router.callback_query(F.data.startswith('withdraw'))
 async def withdraw_money(callback:CallbackQuery,state:FSMContext):
     await state.clear()
     await callback.answer()
