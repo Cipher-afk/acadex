@@ -390,7 +390,7 @@ async def get_level(message: Message, state: FSMContext):
         university = data['university']
         username = data["username"]
         password = data["password"]
-        referrer = data['referrer'] if referrer not in ['none','None','NONE'] else None
+        referrer = data['referrer'] if data['referrer'] not in ['none','None','NONE'] else None
         level = message.text
         telegram_username = str(message.chat.id)
         print(
