@@ -402,7 +402,7 @@ async def get_level(message: Message, state: FSMContext):
             username=username,
             password=password,
             level=str(level),
-            referrer=referrer
+            referrer=referrer if referrer is not None else 'none'
         )
         user_info = InitPayment(user_id=username,telegram_id=str(telegram_username),level=level,referrer=referrer)
         await payment_service.create_user(user_info=user_info)
