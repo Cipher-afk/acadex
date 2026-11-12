@@ -418,7 +418,7 @@ async def confirm_payment(callback: CallbackQuery, bot: Bot, state: FSMContext):
     account_name = data["bank"]
     amount_to_withdraw = data["amount_to_withdraw"]
     telegram_id = str(callback.message.chat.id)
-    if int(amount_to_withdraw) < 1000:
+    if float(amount_to_withdraw) < float(1000):
         await callback.message.answer(
             "You must bring atleast 5 or more paid users to withdraw 😐"
         )
