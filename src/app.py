@@ -477,6 +477,7 @@ async def get_password(message: Message, state: FSMContext):
         )
     if user is not None:
         await message.answer("Enter Current Level[Just the number (eg. 100)]: ")
+	await state.update_data(referrer='none')
         await state.set_state(LoginState.level)
         return
     await message.answer("Enter Your referrer name or none if you don't have one")
