@@ -42,6 +42,7 @@ class Marketer(SQLModel, table=True):
     university: str = Field(sa_column=Column(pg.VARCHAR, server_default="FUO"))
     amount_paid: int = Field(default=0)
     subscribed: bool = Field(default=False)
+    barred: bool = Field(sa_column=Column(pg.BOOLEAN, server_default=text("False")))
     users: List[User] = Relationship(
         back_populates="marketer", sa_relationship_kwargs={"lazy": "selectin"}
     )
