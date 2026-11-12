@@ -240,7 +240,7 @@ async def verify_admin_code(message: Message):
     user_entered_code = message.text
     admins_code = settings.ADMINS_CODE
     if user_entered_code == admins_code:
-        await message.text(
+        await message.answer(
             "Hello There Admin Marketer click on the Login button below to identify your referrals",
             reply_markup=admin_marketer_button,
         )
