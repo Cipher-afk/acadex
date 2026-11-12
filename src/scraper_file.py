@@ -13,7 +13,6 @@ from aiogram.types import Message, FSInputFile,CallbackQuery
 from aiogram import Bot
 import os
 from tasks import scraping_tasks
-from buttons import create_session_buttons
 
 BASE_DIR = Path(__file__).resolve().parent
 
