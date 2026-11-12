@@ -134,7 +134,9 @@ class PaymentService:
             return {
                 "all_users": len(users) if users is not None else 0,
                 "paid_users": (
-                    len(paid_users) if paid_users is not None and paid_users else 0
+                    len(list(paid_users))
+                    if paid_users is not None and paid_users
+                    else 0
                 ),
             }
 
