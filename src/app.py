@@ -353,8 +353,18 @@ async def get_password(message: Message, state: FSMContext):
         password=password,
         university=university,
     )
-    marketer = await payment_service.create_marketer(marketer_model=marketer_model)
-    await get_marketer_info(marketer=marketer, state=state, message=message)
+    marketer = await payment_service.get_marketer_by_telegram_id(
+        telegram_id=telegram_id
+    )
+    if marketer is not None:
+        marketer_login_button = create_button("Login", "marketer_login")
+        await message.answer(
+            "You already have an account login with the button below",
+            reply_markup=marketer_login_button,
+        )
+        return
+    new_marketer = await payment_service.create_marketer(marketer_model=marketer_model)
+    await get_marketer_info(marketer=new_marketer, state=state, message=message)
 
 
 @router.callback_query(F.data.startswith("withdraw"))
