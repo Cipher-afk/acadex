@@ -5,10 +5,11 @@ class InitPayment(BaseModel):
     user_id: str
     telegram_id: str
     level: int
-    referrer:str|None
+    referrer: str | None
+
 
 class MarketerModel(BaseModel):
-    telegram_id:str
-    username:str
-    password:str
-
+    telegram_id: str
+    username: str
+    university: str
+    password: str
