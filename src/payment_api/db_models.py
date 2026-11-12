@@ -12,7 +12,7 @@ class User(SQLModel, table=True):
     user_id: str
     is_paid: bool = Field(sa_column=Column(pg.BOOLEAN, server_default=text("False")))
     level: int
-    referrer:Optional[str] = Field(foreign_key='marketer.marketer_username',nullable=True)
+    referrer:Optional[str] = Field(foreign_key='marketer.username',nullable=True)
     expiry: datetime = Field(
         sa_column=Column(pg.DATE, nullable=True, server_default=None)
     )
