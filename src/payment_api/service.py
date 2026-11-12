@@ -87,7 +87,7 @@ class PaymentService:
         async with get_session_ctx() as session:
             statement = select(Marketer).where(Marketer.university == university)
             results = await session.execute(statement)
-            marketers = await results.scalars().all()
+            marketers = results.scalars().all()
             return marketers
 
     async def get_marketer_by_username(self, username: str):
