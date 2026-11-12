@@ -9,7 +9,7 @@ import asyncio
 from redis_config import get_url, store_url
 from pathlib import Path
 from PIL import Image
-from aiogram.types import Message, FSInputFile,CallbackQuery
+from aiogram.types import Message, FSInputFile, CallbackQuery
 from aiogram import Bot
 import os
 from tasks import scraping_tasks
@@ -17,8 +17,8 @@ from tasks import scraping_tasks
 BASE_DIR = Path(__file__).resolve().parent
 
 UNIVERSITIES_PERMITTED = {
-    "FUO":"https://ecampus.fuotuoke.edu.ng/ecampus/login.html",
-    "RSU":"https://ecampus.rsu.edu.ng/ecampus/login.html"
+    "FUO": "https://ecampus.fuotuoke.edu.ng/ecampus/login.html",
+    "RSU": "https://ecampus.rsu.edu.ng/ecampus/login.html",
 }
 
 
@@ -35,21 +35,21 @@ async def is_fee_blocked(page: Page, bot: Bot, message: Message):
 
 
 async def get_menu(
-    session_url: str,page:Page, bot: Bot, context: BrowserContext, message: Message
+    session_url: str, page: Page, bot: Bot, context: BrowserContext, message: Message
 ):
     while True:
         try:
-                    # page = await context.new_page()
-                    # await message.answer('Getting Menu...')
-                    # await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
-            await message.answer('Menu page loaded')
+            # page = await context.new_page()
+            # await message.answer('Getting Menu...')
+            # await page.goto(session_url, timeout=8000000,wait_until='domcontentloaded')
+            await message.answer("Menu page loaded")
             # try:
             #     await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=120000)
             # except TimeoutError:
             #     await page.wait_for_selector("span.matric_no", timeout=120000,state='visible')
             #     mat_num = await page.locator("span.matric_no").inner_text()
             #     await message.answer(f"👨‍🎓 Found Matric Number: {mat_num}")
-                # await message.answer('Looking for your profile details...')
+            # await message.answer('Looking for your profile details...')
             # await page.wait_for_selector(
             #     ".user_text", timeout=7000,state='visible'
             # )
@@ -65,7 +65,7 @@ async def get_menu(
             await bot.send_photo(
                 chat_id=message.chat.id,
                 photo=FSInputFile(Path(BASE_DIR, "error1-screenshot.png")),
-                caption=e
+                caption=e,
             )
             await message.answer("❌ Network Timeout Retrying...")
             await page.close()
@@ -136,7 +136,7 @@ async def download_payment_receipts(
 
 
 async def download_results(
-    context: BrowserContext,page:Page, session_url: str, message: Message, bot: Bot
+    context: BrowserContext, page: Page, session_url: str, message: Message, bot: Bot
 ):
     menu, page = await get_menu(
         session_url=session_url, page=page, bot=bot, context=context, message=message
@@ -163,7 +163,7 @@ async def download_results(
             await bot.send_photo(
                 chat_id=message.chat.id,
                 photo=FSInputFile(Path(BASE_DIR, "result-screenshot.png")),
-                caption='Result page'
+                caption="Result page",
             )
             await page.wait_for_selector("li[role='option']", timeout=60000)
             options = page.locator("li[role='option']")
@@ -174,7 +174,7 @@ async def download_results(
                 continue
             else:
                 break
-        except TimeoutError:  
+        except TimeoutError:
             await message.answer("❌ Network Timeout Retrying...")
             continue
 
@@ -183,7 +183,7 @@ async def download_results(
     options_clicked = list(set([]))
     pdf_page = await context.new_page()
     await pdf_page.goto(session_url, wait_until="domcontentloaded")
-    for i in (range(1, await options.count())):
+    for i in range(1, await options.count()):
         print(options_clicked)
         session = await options.nth(i).inner_text(timeout=60000)
         await message.answer(
@@ -195,14 +195,9 @@ async def download_results(
                 try:
                     await page.wait_for_selector(".highest_gpa", timeout=60000)
                     highest_gpa = await page.locator(".highest_gpa").text_content(
-                                timeout=800000
-                            )
-                    if (
-                        len(
-                            highest_gpa
-                        )
-                        > 1
-                    ):
+                        timeout=800000
+                    )
+                    if len(highest_gpa) > 1:
                         pass
                     else:
                         await message.answer(
@@ -211,7 +206,7 @@ async def download_results(
                         await options.nth(i).click()
                         continue
                     print("Found highest gpa")
-                    await message.answer(f'Your Highest GPA is {highest_gpa}')
+                    await message.answer(f"Your Highest GPA is {highest_gpa}")
                     semesters = page.locator("li.nav-item")
                     semester_count = await semesters.count()
                     print(semester_count)
@@ -290,8 +285,6 @@ async def download_results(
             pass
 
 
-
-
 async def get_result_summary(
     context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page
 ):
@@ -336,7 +329,7 @@ async def download_courses(
     session_url: str,
     message: Message,
     bot: Bot,
-    page:Page,
+    page: Page,
     level: int = None,
 ):
     menu, page = await get_menu(
@@ -462,7 +455,7 @@ async def download_biodata(
     bot: Bot,
 ):
     menu, page = await get_menu(
-        session_url=session_url, bot=bot, context=context,page=page, message=message
+        session_url=session_url, bot=bot, context=context, page=page, message=message
     )
     fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
     if fee_blocked:
@@ -563,7 +556,12 @@ async def download_admmission_forms(
 
 
 async def login(
-    context: BrowserContext,university:str, username: str, password: str, message: Message, bot: Bot
+    context: BrowserContext,
+    university: str,
+    username: str,
+    password: str,
+    message: Message,
+    bot: Bot,
 ):
     # await message.answer("Login Started")
     MAX_RETRIES = 5
@@ -572,11 +570,11 @@ async def login(
         try:
             page = await context.new_page()
             if university in UNIVERSITIES_PERMITTED:
-                await page.goto(
-                    UNIVERSITIES_PERMITTED[university], timeout=800000
-                )
+                await page.goto(UNIVERSITIES_PERMITTED[university], timeout=800000)
             else:
-                await message.answer(f"The university {university} is unfortunately not on acadex yet 😞💔")
+                await message.answer(
+                    f"The university {university} is unfortunately not on acadex yet 😞💔"
+                )
                 return
             print("Page opened")
             await message.answer("🔐 Logging you in...")
@@ -585,7 +583,7 @@ async def login(
             await page.get_by_text("Continue").click()
             print("continue clicked")
             await message.answer("Password page loading...")
-            await page.wait_for_selector('#password',timeout=60000)
+            await page.wait_for_selector("#password", timeout=60000)
             await page.fill("#password", password)
             await message.answer("Password entered")
             await page.click("#btn_login", timeout=60000)
@@ -608,24 +606,44 @@ async def login(
                         ".user_text", timeout=180000, state="visible"
                     ):
                         try:
-                            if await page.wait_for_selector(".row.g-5.myfeelist",state='visible',timeout=80000):
-                                await message.answer(f"🏫 {university} Home Page Loaded")
-                                await message.answer("Getting your profile details...🔃")
-                            elif await page.wait_for_selector("span.student_name",state='visible',timeout=80000):
-                                await message.answer(f"🏫 {university} Home Page Loaded")
-                                await message.answer("Getting your profile details...🔃") 
-                        except TimeoutError:
-                                if page.get_by_text('You are not signed in or your session has expired.'):
-                                    session_expired = True
-                                    await message.answer('Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖')
-                                    break
-                                await page.screenshot(path=Path(BASE_DIR, "error-screenshot.png"))
-                                await bot.send_photo(
-                                    chat_id=message.chat.id,
-                                    photo=FSInputFile(Path(BASE_DIR, "error-screenshot.png")),
+                            if await page.wait_for_selector(
+                                ".row.g-5.myfeelist", state="visible", timeout=80000
+                            ):
+                                await message.answer(
+                                    f"🏫 {university} Home Page Loaded"
                                 )
-                                await message.answer('Page not loaded properly')
-                                raise TimeoutError('Page not loaded properly')
+                                await message.answer(
+                                    "Getting your profile details...🔃"
+                                )
+                            elif await page.wait_for_selector(
+                                "span.student_name", state="visible", timeout=80000
+                            ):
+                                await message.answer(
+                                    f"🏫 {university} Home Page Loaded"
+                                )
+                                await message.answer(
+                                    "Getting your profile details...🔃"
+                                )
+                        except TimeoutError:
+                            if page.get_by_text(
+                                "You are not signed in or your session has expired."
+                            ):
+                                session_expired = True
+                                await message.answer(
+                                    "Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖"
+                                )
+                                break
+                            await page.screenshot(
+                                path=Path(BASE_DIR, "error-screenshot.png")
+                            )
+                            await bot.send_photo(
+                                chat_id=message.chat.id,
+                                photo=FSInputFile(
+                                    Path(BASE_DIR, "error-screenshot.png")
+                                ),
+                            )
+                            await message.answer("Page not loaded properly")
+                            raise TimeoutError("Page not loaded properly")
                     # await page.wait_for_selector(
                     #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
                     # )
@@ -640,7 +658,7 @@ async def login(
                         photo=FSInputFile(Path(BASE_DIR, "screenshot.png")),
                     )
                     session_url = page.url
-                    return session_url,page
+                    return session_url, page
                 except TimeoutError:
                     if attempt == MAX_RETRIES:
                         await message.answer(
@@ -663,7 +681,12 @@ async def login(
 
 
 async def main(
-    username: str, password: str,university:str, download_info: str, message: Message, bot: Bot
+    username: str,
+    password: str,
+    university: str,
+    download_info: str,
+    message: Message,
+    bot: Bot,
 ):
     async with async_playwright() as p:
         await message.answer("Scrape started")
@@ -684,7 +707,7 @@ async def main(
             print("None")
             session_url = await get_url()
         else:
-            session_url,page = await login(
+            session_url, page = await login(
                 university=university,
                 context=context,
                 username=username,
