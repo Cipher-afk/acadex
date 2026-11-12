@@ -399,7 +399,8 @@ async def get_bank(message: Message, state: FSMContext):
 @router.message(WithdrawState.account_name)
 async def get_account_name(message: Message, state: FSMContext):
     account_name = message.text
-    amount_to_withdraw = await state.get_data()["amount_to_withdraw"]
+    data = await state.get_data()
+    amount_to_withdraw = data["amount_to_withdraw"]
     confirm_retry_buttons_ = confirm_retry_buttons(gain_made=amount_to_withdraw)
     await state.update_data(account_name=account_name)
     await message.answer(
