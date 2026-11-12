@@ -36,6 +36,8 @@ DOMAIN_NAME = settings.DOMAIN_NAME
 login_button = create_button(text="Login", callback_data="login")
 services_buttons = get_service_buttons()
 access_buttons = get_access_buttons()
+marketer_login_button = create_button("Login", "marketer_login")
+marketer_signup_button = create_button("Signup", "signup:marketer")
 
 
 async def get_marketer_data(marketer: Marketer):
@@ -180,6 +182,7 @@ acadex might have a little delay in getting your results due to the portal's res
 
 /login - Connect your FUO Portal Account
 /services - Get the list of tools offered
+/apply_for_marketer_position - Apply to be a marketer for acadex and earn money by referring users to the bot
 
 Simple and Easy. Tap *Login* below to begin 👇
 And also Downloading Receipts is free for all users, let's give you a test run of the bot by downloading your receipts for free 😎🥂
@@ -191,7 +194,7 @@ And also Downloading Receipts is free for all users, let's give you a test run o
 
 @router.message(Command("help"))
 async def get_help(message: Message):
-    help_message = "/start - Start the bot\n/login - Connect Your FUO Portal Account\n/services - Get the list of tools offered"
+    help_message = "/start - Start the bot\n/login - Connect Your FUO Portal Account\n/services - Get the list of tools offered\n/apply_for_marketer_position - Apply to be a marketer for acadex and earn money by referring users to the bot"
     await message.answer(help_message)
 
 
@@ -280,8 +283,10 @@ async def get_login_password(message: Message, state: FSMContext):
     password = message.text
     marketer = await payment_service.get_marketer_by_username(username=username)
     if marketer is None:
+        marketer_signup_button = create_button("Signup", "signup:marketer")
         await message.answer(
-            "Username Invalid Please enter a correct username or create an account if you don't have one"
+            "Username Invalid Please enter a correct username or create an account if you don't have one",
+            reply_markup=marketer_signup_button,
         )
         await state.clear()
         return
@@ -291,7 +296,9 @@ async def get_login_password(message: Message, state: FSMContext):
     if verified:
         await get_marketer_info(marketer=marketer, state=state, message=message)
         return
-    await message.answer("Password Incorrect Please Try Again")
+    await message.answer(
+        "Password Incorrect Please Try Again", reply_markup=marketer_login_button
+    )
     return
 
 
@@ -357,7 +364,7 @@ async def get_password(message: Message, state: FSMContext):
         telegram_id=telegram_id
     )
     if marketer is not None:
-        marketer_login_button = create_button("Login", "marketer_login")
+
         await message.answer(
             "You already have an account login with the button below",
             reply_markup=marketer_login_button,
