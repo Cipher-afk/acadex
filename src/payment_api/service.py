@@ -126,13 +126,14 @@ class PaymentService:
             statement = select(User).where(User.referrer == marketer_username)
             results = await session.execute(statement=statement)
             users = results.scalars().all()
+            print(users,flush=True)
             paid_users = (
                 filter(lambda user: user.is_paid == True, users)
-                if users is not None
+                if users
                 else None
             )
             return {
-                "all_users": len(users) if users is not None else 0,
+                "all_users": len(users) if users else 0,
                 "paid_users": (
                     len(list(paid_users))
                     if paid_users is not None and paid_users
