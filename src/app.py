@@ -220,10 +220,24 @@ async def login(message: Message, state: FSMContext):
 
 @router.message(Command("services"))
 async def get_services(message: Message):
+    telegram_username = str(message.chat.id)
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return
     await message.answer(
         "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
         reply_markup=services_buttons,
     )
+    if not await payment_verified(
+        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return
 
 
 @router.message(Command("marketerApplication"))
@@ -546,6 +560,7 @@ async def get_level(message: Message, state: FSMContext):
             )
         if user is None:
             await payment_service.create_user(user_info=user_info)
+        print(user,flush=True)
         await message.answer(
             "Credentials Saved Pick a service to continue".title(),
             reply_markup=services_buttons,
@@ -556,6 +571,10 @@ async def get_level(message: Message, state: FSMContext):
             text=f"New Login: {username} with level {level} and from {university} referred from {referrer}",
         )
         await save_payment(user_id=username, truth_value="false")
+        if not await payment_verified(
+            user_id=username, telegram_id=str(telegram_username), level=level, message=message, bot=bot
+        ):
+            return
     except TelegramNetworkError:
         await message.answer("Check Your Network and try again".title())
 
