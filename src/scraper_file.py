@@ -608,16 +608,18 @@ async def login(
                         try:
                             if await page.wait_for_selector(
                                 ".row.g-5.myfeelist", state="visible", timeout=80000
-                            ):
+                            ) != None:
                                 await message.answer(
                                     f"🏫 {university} Home Page Loaded"
                                 )
                                 await message.answer(
                                     "Getting your profile details...🔃"
                                 )
-                            elif await page.wait_for_selector(
+                            else:
+                                await page.wait_for_selector(
                                 "span.student_name", state="visible", timeout=80000
-                            ):
+                            )
+                                print('Student name found',flush=True)
                                 await message.answer(
                                     f"🏫 {university} Home Page Loaded"
                                 )
