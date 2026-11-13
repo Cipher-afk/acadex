@@ -694,10 +694,11 @@ async def get_result_summary(callback: CallbackQuery, bot: Bot):
     telegram_id = message.chat.id
     if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
-    username, password, university = (
+    username, password, university,level = (
         data["username"],
         data["password"],
         data["university"],
+        data['level']
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -730,10 +731,11 @@ async def get_courses(callback: CallbackQuery, bot: Bot):
     telegram_id = message.chat.id
     if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
-    username, password, university = (
+    username, password, university,level = (
         data["username"],
         data["password"],
         data["university"],
+        data['level']
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -765,10 +767,11 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
     telegram_id = message.chat.id
     if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
-    username, password, university = (
+    username, password, university,level = (
         data["username"],
         data["password"],
         data["university"],
+        data['level']
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -800,10 +803,11 @@ async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     telegram_id = message.chat.id
     if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
-    username, password, university = (
+    username, password, university,level = (
         data["username"],
         data["password"],
         data["university"],
+        data['level']
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -839,7 +843,7 @@ async def stop_scraping(message: Message, state: FSMContext):
         task.cancel()
         await message.answer("Scraping Stopped")
     else:
-        await message("No operation running")
+        await message.answer("No operation running")
     await state.clear()
 
 
