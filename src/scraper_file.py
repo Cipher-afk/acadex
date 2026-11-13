@@ -632,6 +632,15 @@ async def login(
                                 await message.answer(
                                     "Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖"
                                 )
+                                await page.screenshot(
+                                path=Path(BASE_DIR, "error-screenshot.png")
+                            )
+                                await bot.send_photo(
+                                    chat_id=message.chat.id,
+                                    photo=FSInputFile(
+                                        Path(BASE_DIR, "error-screenshot.png")
+                                    ),
+                                )
                                 break
                             await page.screenshot(
                                 path=Path(BASE_DIR, "error-screenshot.png")
