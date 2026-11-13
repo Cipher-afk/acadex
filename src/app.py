@@ -51,10 +51,10 @@ async def generate_payment_link(telegram_username:str,message:Message):
         print(e)
         await message.answer("Please login before downlaoding")
         return False
-    await message.answer(
-        "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
-        reply_markup=services_buttons,
-    )
+    # await message.answer(
+    #     "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
+    #     reply_markup=services_buttons,
+    # )
     if not await payment_verified(
         user_id=user_id,referrer=referrer, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
