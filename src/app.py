@@ -555,7 +555,7 @@ async def get_level(message: Message, state: FSMContext):
             referrer=referrer,
         )
         async with get_session_ctx() as session:
-            user = payment_service.get_user_by_telegram_id(
+            user = await payment_service.get_user_by_telegram_id(
                 telegram_id=str(telegram_username), session=session
             )
         if user is None:
