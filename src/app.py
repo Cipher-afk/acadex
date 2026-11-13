@@ -59,6 +59,7 @@ async def generate_payment_link(telegram_username:str,message:Message):
         user_id=user_id,referrer=referrer, telegram_id=telegram_id, level=level, message=message, bot=bot
     ):
         return False
+    return True
 
 async def get_marketer_data(marketer: Marketer):
     users_data = await payment_service.get_users_referred_by_marketer(
