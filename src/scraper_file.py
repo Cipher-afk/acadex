@@ -607,18 +607,8 @@ async def login(
                     ):
                         try:
                             if await page.wait_for_selector(
-                                ".row.g-5.myfeelist", state="visible", timeout=80000
-                            ) != None:
-                                await message.answer(
-                                    f"🏫 {university} Home Page Loaded"
-                                )
-                                await message.answer(
-                                    "Getting your profile details...🔃"
-                                )
-                            else:
-                                await page.wait_for_selector(
                                 "span.student_name", state="visible", timeout=80000
-                            )
+                            ):
                                 print('Student name found',flush=True)
                                 await message.answer(
                                     f"🏫 {university} Home Page Loaded"
@@ -627,34 +617,45 @@ async def login(
                                     "Getting your profile details...🔃"
                                 )
                         except TimeoutError:
-                            if page.get_by_text(
-                                "You are not signed in or your session has expired."
-                            ):
-                                session_expired = True
-                                await message.answer(
-                                    "Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖"
+                            try:
+                                if await page.wait_for_selector(
+                                    ".row.g-5.myfeelist", state="visible", timeout=80000
+                                ) != None:
+                                    await message.answer(
+                                        f"🏫 {university} Home Page Loaded"
+                                    )
+                                    await message.answer(
+                                        "Getting your profile details...🔃"
+                                    )
+                            except TimeoutError:
+                                if page.get_by_text(
+                                    "You are not signed in or your session has expired."
+                                ):
+                                    session_expired = True
+                                    await message.answer(
+                                        "Your session has expired attempting to relogin 🤕\nI will get your dashboard even if it kills me you just relax 👩‍💻🤖"
+                                    )
+                                    await page.screenshot(
+                                    path=Path(BASE_DIR, "error-screenshot.png")
                                 )
+                                    await bot.send_photo(
+                                        chat_id=message.chat.id,
+                                        photo=FSInputFile(
+                                            Path(BASE_DIR, "error-screenshot.png")
+                                        ),
+                                    )
+                                    break
                                 await page.screenshot(
-                                path=Path(BASE_DIR, "error-screenshot.png")
-                            )
+                                    path=Path(BASE_DIR, "error-screenshot.png")
+                                )
                                 await bot.send_photo(
                                     chat_id=message.chat.id,
                                     photo=FSInputFile(
                                         Path(BASE_DIR, "error-screenshot.png")
                                     ),
                                 )
-                                break
-                            await page.screenshot(
-                                path=Path(BASE_DIR, "error-screenshot.png")
-                            )
-                            await bot.send_photo(
-                                chat_id=message.chat.id,
-                                photo=FSInputFile(
-                                    Path(BASE_DIR, "error-screenshot.png")
-                                ),
-                            )
-                            await message.answer("Page not loaded properly")
-                            raise TimeoutError("Page not loaded properly")
+                                await message.answer("Page not loaded properly")
+                                raise TimeoutError("Page not loaded properly")
                     # await page.wait_for_selector(
                     #     ".d-inline-flex.text-capitalize.user_text", timeout=180000
                     # )
