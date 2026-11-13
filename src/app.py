@@ -40,6 +40,26 @@ marketer_login_button = create_button("Login", "marketer_login")
 marketer_signup_button = create_button("Signup", "signup:marketer")
 
 
+async def generate_payment_link(telegram_username:str,message:Message):
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    try:
+        level = data["level"]
+        user_id = data["username"]
+        referrer = data['referrer']
+    except KeyError as e:
+        print(e)
+        await message.answer("Please login before downlaoding")
+        return False
+    await message.answer(
+        "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
+        reply_markup=services_buttons,
+    )
+    if not await payment_verified(
+        user_id=user_id,referrer=referrer, telegram_id=telegram_id, level=level, message=message, bot=bot
+    ):
+        return False
+
 async def get_marketer_data(marketer: Marketer):
     users_data = await payment_service.get_users_referred_by_marketer(
         marketer_username=marketer.username
@@ -94,7 +114,7 @@ Amount Withdrawn = {amount_paid}
 
 
 async def payment_verified(
-    user_id, telegram_id, level: str, message: Message, bot: Bot
+    user_id, telegram_id, level: str,referrer:str|None, message: Message, bot: Bot
 ):
     await message.answer("🤖 Bot loading.....")
     if user_id != "kudos.ajao":
@@ -112,6 +132,7 @@ async def payment_verified(
                             "user_id": user_id,
                             "telegram_id": str(telegram_id),
                             "level": str(level),
+                            'referrer':referrer
                         },
                     )
                     print(res.status_code, res.text, flush=True)
@@ -226,6 +247,7 @@ async def get_services(message: Message):
     try:
         level = data["level"]
         user_id = data["username"]
+        referrer = data['referrer']
     except KeyError as e:
         print(e)
         await message.answer("Please login before downlaoding")
@@ -234,10 +256,7 @@ async def get_services(message: Message):
         "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
         reply_markup=services_buttons,
     )
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
-        return
+    await generate_payment_link(telegram_username=telegram_username,message=message)
 
 
 @router.message(Command("marketerApplication"))
@@ -572,10 +591,7 @@ async def get_level(message: Message, state: FSMContext):
             text=f"New Login: {username} with level {level} and from {university} referred from {referrer}",
         )
         await save_payment(user_id=username, truth_value="false")
-        if not await payment_verified(
-            user_id=username, telegram_id=str(telegram_username), level=level, message=message, bot=bot
-        ):
-            return
+        await generate_payment_link(telegram_username=str(telegram_username),message=message)
     except TelegramNetworkError:
         await message.answer("Check Your Network and try again".title())
 
@@ -636,24 +652,16 @@ async def get_payment_receipts(callback: CallbackQuery, bot: Bot):
 async def get_results(callback: CallbackQuery, bot: Bot):
     await callback.answer()
     message = callback.message
-    telegram_username = message.chat.id
-    data = await get_userinfo(telegram_username)
+    telegram_username = str(message.chat.id)
     telegram_id = message.chat.id
-    try:
-        level = data["level"]
-        user_id = data["username"]
-    except KeyError as e:
-        print(e)
-        await message.answer("Please login before downlaoding")
+    data = await get_userinfo(telegram_username)
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
-        return
-    username, password, university = (
+    username, password, university,level = (
         data["username"],
         data["password"],
         data["university"],
+        data['level']
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -684,16 +692,7 @@ async def get_result_summary(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    try:
-        level = data["level"]
-        user_id = data["username"]
-    except KeyError as e:
-        print(e)
-        await message.answer("Please login before downlaoding")
-        return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
     username, password, university = (
         data["username"],
@@ -729,16 +728,7 @@ async def get_courses(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    try:
-        level = data["level"]
-        user_id = data["username"]
-    except KeyError as e:
-        print(e)
-        await message.answer("Please login before downlaoding")
-        return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
     username, password, university = (
         data["username"],
@@ -773,16 +763,7 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    try:
-        level = data["level"]
-        user_id = data["username"]
-    except KeyError as e:
-        print(e)
-        await message.answer("Please login before downlaoding")
-        return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
     username, password, university = (
         data["username"],
@@ -813,20 +794,11 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
 @router.callback_query(F.data == "admission_forms")
 async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     await callback.answer()
-    message = callback.messagea
+    message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    try:
-        level = data["level"]
-        user_id = data["username"]
-    except KeyError as e:
-        print(e)
-        await message.answer("Please login before downlaoding")
-        return
-    if not await payment_verified(
-        user_id=user_id, telegram_id=telegram_id, level=level, message=message, bot=bot
-    ):
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
         return
     username, password, university = (
         data["username"],
