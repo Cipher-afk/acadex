@@ -182,7 +182,7 @@ acadex might have a little delay in getting your results due to the portal's res
 
 /login - Connect your FUO Portal Account
 /services - Get the list of tools offered
-/apply_for_marketer_position - Apply to be a marketer for acadex and earn money by referring users to the bot
+/apply for marketer position - Apply to be a marketer for acadex and earn money by referring users to the bot
 
 Simple and Easy. Tap *Login* below to begin 👇
 And also Downloading Receipts is free for all users, let's give you a test run of the bot by downloading your receipts for free 😎🥂
@@ -226,7 +226,7 @@ async def get_services(message: Message):
     )
 
 
-@router.message(Command("apply_for_marketer_position"))
+@router.message(Command("apply for marketer position"))
 async def apply_for_a_marketer(message: Message, state: FSMContext):
     await message.answer(
         "Enter Code given to you by admin to login as an admin marketer\nor follow the options below for normal marketers",
