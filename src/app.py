@@ -554,12 +554,13 @@ async def get_level(message: Message, state: FSMContext):
             level=level,
             referrer=referrer,
         )
+        print(f'Referrer:{referrer}')
         async with get_session_ctx() as session:
             user = await payment_service.get_user_by_telegram_id(
                 telegram_id=str(telegram_username), session=session
             )
         if user is None:
-            await payment_service.create_user(user_info=user_info)
+            user = await payment_service.create_user(user_info=user_info)
         print(user,flush=True)
         await message.answer(
             "Credentials Saved Pick a service to continue".title(),
