@@ -13,6 +13,10 @@ from aiogram.types import Message, FSInputFile, CallbackQuery
 from aiogram import Bot
 import os
 from tasks import scraping_tasks
+from buttons import build_payment_buttons,ButtonInfoDict
+from typing import List
+from utils import ask_for_wait
+from datetime import datetime,timedelta
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -554,7 +558,131 @@ async def download_admmission_forms(
 # async def pay_fee_blocks(context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page):
 #     pass
 
+async def pay_with_remita(remita_page:Page,rrr_code:str,bot:Bot,message:Message):
+    telegram_id = message.chat.id
+    cookies_accept_button = remita_page.locator('button.site-agreement-button').first
+    await cookies_accept_button.click()
+    await remita_page.fill('#mat-input-0',rrr_code)
+    await remita_page.wait_for_selector('div.payment-summary')
+    payment_summary_modal = remita_page.locator('div.payment-summary')
+    total_amount = payment_summary_modal.locator('p.total').text_content()
+    await remita_page.screenshot(path=Path('remita-screenshot.png'))
+    await bot.send_photo(
+        chat_id=telegram_id,
+        photo=FSInputFile(Path('remita-screenshot.png')),
+    )
+    confirmation_button_info:List[ButtonInfoDict] = [{'button_name':'Confirm','button_callback':'confirm:true'},{'button_name':'Cancel','button_callback':'confirm:false'}]
+    confirmation_buttons = await build_payment_buttons(button_info=confirmation_button_info)
+    payment_choice = await ask_for_wait(message=message,text=f'You are about to pay {total_amount} for your fee block\nPlease confirm that these details are correct',callback_buttons=confirmation_buttons,timeout=30000)
+    if payment_choice == 'No':
+        await message.answer('Please verify your details and try again later Thank You for using Acadex')
+        return
+    payment_button = payment_summary_modal.locator('button.button-primary-large-rounded')
+    await payment_button.click()
+    await remita_page.get_by_text('Bank Transfer',exact=True).click()
+    await remita_page.wait_for_selector('div.fade-in-up')
+    time_when_sent = datetime.now()
+    expiry_time = time_when_sent + timedelta(minutes=30)
+    account_details_modal = remita_page.locator('div.fade-in-up')
+    await remita_page.screenshot(path=Path('remita-screenshot.png'))
+    await bot.send_photo(
+        chat_id=telegram_id,
+        photo=FSInputFile(Path('remita-screenshot.png'))
+    )
+    sent_the_money_button = account_details_modal.locator('button.btn-primary')
+    sent_the_money_button_info: List[ButtonInfoDict] = [{"button_name": "I have sent the money", "button_callback": "money_sent:true"}]
+    sent_the_money_buttons = await build_payment_buttons(button_infos=sent_the_money_button_info)
+    sent_the_money_choice = await ask_for_wait(message=message,text='Have you sent the money to the account details provided above expires in 30mins or send Stop to end the process?',callback_buttons=sent_the_money_buttons,timeout=30000)
+    if sent_the_money_choice == 'True':
+        if (datetime.now() >= expiry_time):
+            await message.answer('Time Limit Reached for sending the money please try again')
+            return
+    sent_the_money_button.click()
+    await message.answer('Remita is Processing your payment please wait for a few minutes..')
+    await asyncio.sleep(120)
+    await remita_page.screenshot(path=Path('remita-screenshot.png'))
+    await bot.send_photo(
+        chat_id=telegram_id,
+        photo=FSInputFile(Path('remita-screenshot.png')),
+        caption=f'Your Payment Status is as follows if it\'s still showing pending wait a while or check your portal that is if you actually sent the money 🙂'
+    )
 
+async def pay_fee_block(context: BrowserContext, session_url: str, message: Message, bot: Bot, page: Page):
+    menu, page = await get_menu(
+        context=context, bot=bot, session_url=session_url, message=message, page=page
+    )
+    fee_blocked = await is_fee_blocked(page=page, bot=bot, message=message)
+    if not fee_blocked:
+        await message.answer('There are no fee blocks to pay')
+        return
+    fee_block_div = page.locator(".row.g-5.myfeelist").first
+    all_fees = await fee_block_div.locator('.card-body').all()
+    number_of_fees = len(all_fees)
+    await message.answer(f"Found {number_of_fees} fee blocks")
+    button_info:List[ButtonInfoDict] = [] 
+    fee_name_block = {}
+    for fee in all_fees:
+        fee_name = await fee.locator('h6.text-secondary').first.text_content()
+        fee_price = await fee.locator('span.fw_bolder').first.text_content()
+        button_info.append({"button_name": fee_name, "button_callback": f"fee:{fee_name}:{fee_price}"})
+        fee_name_block[fee_name] = fee
+    payment_buttons = await build_payment_buttons(button_info)
+    fee_choice = await ask_for_wait(message=message,text=f'You have a total of {number_of_fees} fee blocks pick the one you want to pay',callback_buttons=payment_buttons,timeout=30000)
+    fee_data = fee_choice.split(':')
+    selected_fee_name = fee_data[1]
+    selected_fee_price = fee_data[2]
+    chosen_fee_block:Locator = fee_name_block[selected_fee_name]
+    chosen_fee_block_index = list(fee_name_block.keys()).index(selected_fee_name)
+    payment_button = chosen_fee_block.get_by_text('Pay',exact=True)
+    await payment_button.click()
+    await page.wait_for_selector('.swal2-popup',timeout=60000)
+    popup_div = page.locator('.swal2-popup')
+    await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
+    await bot.send_photo(
+        chat_id=message.chat.id,
+        photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
+    )
+    confirmation_button_info:List[ButtonInfoDict] = [{'button_name':'Confirm','button_callback':'confirm:true'},{'button_name':'Cancel','button_callback':'confirm:false'}]
+    confirmation_buttons = await build_payment_buttons(button_info=confirmation_button_info)
+    confirmation_choice = await ask_for_wait(message=message,text="Please confirm that these details are correct",callback_buttons=confirmation_buttons,timeout=30000)
+    if confirmation_choice == 'No':
+        await popup_div.locator('button.swal2-deny').click()
+        await message.answer('Payment Cancelled')
+        return
+    await popup_div.locator('button.swal2-confirm').click()
+    await message.answer('Proceeding to the next step..')
+    await page.wait_for_selector('div.contact-box',timeout=60000)
+    await page.get_by_text('Continue',exact=True).click()
+    await page.wait_for_selector('span#amount',timeout=60000)
+    total_amount = await page.locator('span#amount').text_content()
+    await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
+    await bot.send_photo(
+        chat_id=message.chat.id,
+        photo=FSInputFile(Path(BASE_DIR, "payment-screenshot.png")),
+        caption=f'You are about to pay {total_amount} for {selected_fee_name} fee block\nPlease confirm that these details are correct'
+    )
+    info_confirmation_button_info:List[ButtonInfoDict] = [{'button_name':'Confirm','button_callback':'confirm:true'},{'button_name':'Cancel','button_callback':'confirm:false'}]
+    info_confirmation_buttons = await build_payment_buttons(button_info=info_confirmation_button_info)
+    info_confirmation_choice = await ask_for_wait(message=message,text='You are about to pay {total_amount} for {selected_fee_name} fee block\nPlease confirm that these details are correct',callback_buttons=info_confirmation_buttons,timeout=30000)
+    if info_confirmation_choice == 'No':
+        await message.answer('Payment Failed You can try again after resolving your details')
+        return
+    await page.locator('img.monify').click()
+    await page.wait_for_selector('button.paymentbtn')
+    email = await page.locator('span#email').text_content()
+    await page.locator('button.paymentbtn').click()
+    confirm_rrr_button_info:List[ButtonInfoDict] = [{'button_name':'I Have My RRR Remita Code','button_callback':'rrr-confirmed:true'},{'button_name':'Cancel','button_callback':'rrr-confirmed:false'}]
+    confirm_rrr_buttons = await build_payment_buttons(button_info=confirm_rrr_button_info)
+    confirm_rrr_choice = await ask_for_wait(message=message,text=f'Your RRR code should be sent to {email} in less than 3mins',callback_buttons=confirm_rrr_buttons,timeout=30000)
+    if confirm_rrr_choice is None:
+        await message.answer('Please enter a valid code when tryng again')
+        return
+    rrr_code = confirm_rrr_choice
+    remita_page = await context.new_page()
+    await remita_page.goto('https://www.remita.net/pay-rrr')
+    await pay_with_remita(remita_page=remita_page,rrr_code=rrr_code,bot=bot,message=message)
+    
+    
 async def login(
     context: BrowserContext,
     university: str,
@@ -779,6 +907,14 @@ async def main(
 
                 elif download_info == "admission_forms":
                     await download_admmission_forms(
+                        context=context,
+                        page=page,
+                        session_url=session_url,
+                        message=message,
+                        bot=bot,
+                    )
+                elif download_info == 'pay_fee_block':
+                    await pay_fee_block(
                         context=context,
                         page=page,
                         session_url=session_url,

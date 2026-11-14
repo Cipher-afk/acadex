@@ -11,7 +11,7 @@ from scraper_file import main as scraper_main
 import asyncio
 import httpx
 import asyncio
-from tasks import scraping_tasks
+from tasks import scraping_tasks,future_sessions
 from buttons import (
     get_service_buttons,
     create_button,
@@ -181,6 +181,8 @@ class WithdrawState(StatesGroup):
     amount_to_withdraw = State()
     telegram_id = State()
 
+class RRRCodeState(StatesGroup):
+    rrr_code = State()
 
 @router.message(Command("start"))
 async def start_command(message: Message):
@@ -830,6 +832,99 @@ async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     except TelegramNetworkError:
         await message.answer("Network error try again")
 
+@router.callback_query(F.data == 'pay_fee_block')
+async def pay_fee_block(callback: CallbackQuery,bot:Bot):
+    await callback.answer()
+    message = callback.message
+    telegram_username = message.chat.id
+    data = await get_userinfo(telegram_username)
+    telegram_id = message.chat.id
+    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+        return
+    username, password, university,level = (
+        data["username"],
+        data["password"],
+        data["university"],
+        data['level']
+    )
+    await bot.send_message(
+        chat_id=7928624104,
+        text=f"{username} with level {level} and from {university} just attempted to download admission forms",
+    )
+    print("Got username")
+    try:
+        task = asyncio.create_task(
+            scraper_main(
+                university=university,
+                username=username,
+                password=password,
+                download_info="pay_fee_block",
+                message=message,
+                bot=bot,
+            )
+        )
+        scraping_tasks[telegram_id] = task
+    except TelegramNetworkError:
+        await message.answer("Network error try again")
+
+@router.callback_query(F.data.startswith("fee:"))
+async def pick_fee(callback:CallbackQuery):
+    user_id = callback.from_user.id
+    future = future_sessions[user_id]
+    if future and not future.done():
+        callback_data = callback.data
+        fee_name = callback_data.split(':')[1]
+        fee_price = callback_data.split(':')[2]
+        future.set_result(f'{fee_name}:{fee_price}')
+    await callback.answer()
+    await callback.message.answer(f'Attempting to pay you {fee_name} of {fee_price} naira')
+
+@router.callback_query(F.data.startswith("confirm:"))
+async def pick_confirmation(callback:CallbackQuery):
+    await callback.answer()
+    user_id = callback.from_user.id
+    future = future_sessions[user_id]
+    if future and not future.done():
+        callback_data = callback.data
+        confirmation = callback_data.split(':')[1]
+        if confirmation == 'true':
+            future.set_result('Confirm')
+            await callback.message.answer('Thank You for confirming Procedding now')
+        else:
+            future.set_result('No')
+            await callback.message.answer('Please Go to the school portal or the ICT and confirm your details')
+        
+@router.callback_query(F.data.startswith("rrr-confirmed:"))
+async def confirm_rrr(callback:CallbackQuery,state:FSMContext):
+    await callback.answer()
+    callback_data = callback.data
+    confirmation = callback_data.split(':')[1]
+    if confirmation == 'true':
+        await callback.message.answer('Please Enter Your RRR Code')
+        await state.set_state(RRRCodeState.rrr_code)
+    else:
+        await callback.message.answer('Please Go to the school portal or the ICT and confirm your details or try again')
+        return
+
+@router.message(RRRCodeState.rrr_code)
+async def save_rrr_code(message:Message):
+    user_id = message.from_user.id
+    future = future_sessions[user_id]
+    if future and not future.done():
+        rrr_code = message.text
+        future.set_result(rrr_code)
+
+@router.callback_query(F.data.startswith('money_sent:'))
+async def money_sent(callback:CallbackQuery):
+    await callback.answer()
+    user_id = callback.from_user.id
+    future = future_sessions[user_id]
+    if future and not future.done():
+        callback_data = callback.data
+        confirmation = callback_data.split(':')[1]
+        if confirmation == 'true':
+            future.set_result('True')
+            await callback.message.answer('Thank You for confirming the money has been sent')
 
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
 async def stop_scraping(message: Message, state: FSMContext):

@@ -1,6 +1,10 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
-from typing import List
+from typing import List,Dict,TypedDict
+
+class ButtonInfoDict(TypedDict):
+    button_name:str
+    button_callback:str
 
 
 def get_service_buttons():
@@ -11,6 +15,7 @@ def get_service_buttons():
     builder.button(text="Download Courses 📄", callback_data="download_courses")
     builder.button(text="Download_Biodata 🧾", callback_data="download_biodata")
     builder.button(text="Download Admission Forms 📄", callback_data="admission_forms")
+    builder.adjust(text='Pay for Fee Block',callback_data='pay_fee_block')
     builder.adjust(2)
     return builder.as_markup()
 
@@ -55,5 +60,12 @@ def confirm_retry_buttons(gain_made: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="Confirm Pay", callback_data=f"confirm")
     builder.button(text="Edit Details", callback_data=f"withdraw:{gain_made}")
+    builder.adjust(2)
+    return builder.as_markup()
+
+async def build_payment_buttons(button_infos:List[ButtonInfoDict]):
+    builder = InlineKeyboardBuilder()
+    for button_info in button_infos:
+        builder.button(text=button_info['button_name'],callback_data=button_info['button_callback'])
     builder.adjust(2)
     return builder.as_markup()
