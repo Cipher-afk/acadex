@@ -149,6 +149,7 @@ async def payment_verified(
                 print(e)
         print("Got from redis it was true", flush=True)
         return True
+    return True
 
 
 class LoginState(StatesGroup):
