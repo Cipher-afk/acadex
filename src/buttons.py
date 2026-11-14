@@ -15,7 +15,7 @@ def get_service_buttons():
     builder.button(text="Download Courses 📄", callback_data="download_courses")
     builder.button(text="Download_Biodata 🧾", callback_data="download_biodata")
     builder.button(text="Download Admission Forms 📄", callback_data="admission_forms")
-    builder.adjust(text='Pay for Fee Block',callback_data='pay_fee_block')
+    builder.button(text='Pay for Fee Block',callback_data='pay_fee_block')
     builder.adjust(2)
     return builder.as_markup()
 
