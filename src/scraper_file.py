@@ -622,7 +622,8 @@ async def pay_fee_block(context: BrowserContext, session_url: str, message: Mess
     button_info:List[ButtonInfoDict] = [] 
     fee_name_block = {}
     for fee in all_fees:
-        fee_name = await fee.locator('h6.text-secondary').first.text_content()
+        fee_name = await fee.locator('h6.text-secondary',timeout=60000).first.text_content()
+        print(fee_name,flush=True)
         fee_price = await fee.locator('span.fw_bolder').first.text_content()
         button_info.append({"button_name": fee_name, "button_callback": f"fee:{fee_name}:{fee_price}"})
         fee_name_block[fee_name] = fee
@@ -924,8 +925,9 @@ async def main(
             except asyncio.CancelledError:
                 await browser.close()
                 raise
-            except TimeoutError:
+            except TimeoutError as e:
                 await message.answer("❌ Network Timeout Retry")
+                print(e,flush=True)
                 return
             finally:
                 scraping_tasks.pop(message.chat.id, None)
