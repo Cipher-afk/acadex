@@ -652,11 +652,13 @@ async def pay_fee_block(
     button_info: List[ButtonInfoDict] = []
     fee_name_block = {}
     for fee in all_fees:
-        fee_name = await fee.locator(
-            "h6.text-secondary", timeout=60000
-        ).first.text_content()
+        fee_name = await fee.locator("h6.text-secondary").first.text_content(
+            timeout=60000
+        )
         print(fee_name, flush=True)
-        fee_price = await fee.locator("span.fw_bolder").first.text_content()
+        fee_price = await fee.locator("span.fw_bolder").first.text_content(
+            timeout=60000
+        )
         button_info.append(
             {"button_name": fee_name, "button_callback": f"fee:{fee_name}:{fee_price}"}
         )
