@@ -670,16 +670,23 @@ async def pay_fee_block(
         callback_buttons=payment_buttons,
         timeout=30000,
     )
-    print(fee_choice, flush=True)
-    fee_data = fee_choice.split(":")
-    selected_fee_name = fee_data[1]
-    selected_fee_price = fee_data[2]
-    chosen_fee_block: Locator = fee_name_block[selected_fee_name]
-    chosen_fee_block_index = list(fee_name_block.keys()).index(selected_fee_name)
-    payment_button = chosen_fee_block.get_by_text("Pay", exact=True)
-    await payment_button.click()
-    await page.wait_for_selector(".swal2-popup", timeout=60000)
-    popup_div = page.locator(".swal2-popup")
+    try:
+        print(fee_choice, flush=True)
+        fee_data = fee_choice.split(":")
+        print(fee_data, flush=True)
+        selected_fee_name = fee_data[1]
+        selected_fee_price = fee_data[2]
+        chosen_fee_block: Locator = fee_name_block[selected_fee_name]
+        print(chosen_fee_block, flush=True)
+        chosen_fee_block_index = list(fee_name_block.keys()).index(selected_fee_name)
+        payment_button = chosen_fee_block.get_by_text("Pay", exact=True)
+        print(payment_button, flush=True)
+        await payment_button.click()
+        await page.wait_for_selector(".swal2-popup", timeout=60000)
+        popup_div = page.locator(".swal2-popup")
+        print(popup_div, flush=True)
+    except Exception as e:
+        print(e, flush=True)
     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
     await bot.send_photo(
         chat_id=message.chat.id,
