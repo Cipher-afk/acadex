@@ -674,8 +674,8 @@ async def pay_fee_block(
         print(fee_choice, flush=True)
         fee_data = fee_choice.split(":")
         print(fee_data, flush=True)
-        selected_fee_name = fee_data[1]
-        selected_fee_price = fee_data[2]
+        selected_fee_name = fee_data[0]
+        selected_fee_price = fee_data[1]
         chosen_fee_block: Locator = fee_name_block[selected_fee_name]
         print(chosen_fee_block, flush=True)
         chosen_fee_block_index = list(fee_name_block.keys()).index(selected_fee_name)
