@@ -711,12 +711,13 @@ async def pay_fee_block(
         return
     await popup_div.locator("button.swal2-confirm").click()
     await message.answer("Proceeding to the next step..")
-    await page.wait_for_selector("span#email", timeout=60000)
+    frame = page.frame_locator('iframe.paypanelframe').first
+    await frame.locator("span#email").wait_for(timeout=60000)
     print("Found Email", flush=True)
-    await page.get_by_text("Continue", exact=True).click()
+    await frame.get_by_text("Continue", exact=True).click()
     print("Clicked on continue", flush=True)
-    await page.wait_for_selector("span#amount", timeout=60000)
-    total_amount = await page.locator("span#amount").text_content(timeout=60000)
+    await frame.locator("span#amount").wait_for(timeout=60000)
+    total_amount = await frame.locator("span#amount").text_content(timeout=60000)
     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
     await bot.send_photo(
         chat_id=message.chat.id,
@@ -741,10 +742,10 @@ async def pay_fee_block(
             "Payment Failed You can try again after resolving your details"
         )
         return
-    await page.locator("img.monify").click()
-    await page.wait_for_selector("button.paymentbtn")
-    email = await page.locator("span#email").text_content()
-    await page.locator("button.paymentbtn").click()
+    await frame.locator("img.monify").click()
+    await frame.locator("button.paymentbtn").wait_for(timeout=60000)
+    email = await frame.locator("span#email").text_content()
+    await frame.locator("button.paymentbtn").click()
     confirm_rrr_button_info: List[ButtonInfoDict] = [
         {
             "button_name": "I Have My RRR Remita Code",
