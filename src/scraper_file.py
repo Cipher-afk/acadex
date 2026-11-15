@@ -663,7 +663,7 @@ async def pay_fee_block(
             {"button_name": fee_name, "button_callback": f"fee:{fee_name}:{fee_price}"}
         )
         fee_name_block[fee_name] = fee
-    payment_buttons = await build_payment_buttons(button_info)
+    payment_buttons = await build_payment_buttons(button_infos=button_info)
     fee_choice = await ask_for_wait(
         message=message,
         text=f"You have a total of {number_of_fees} fee blocks pick the one you want to pay",
@@ -711,8 +711,10 @@ async def pay_fee_block(
         return
     await popup_div.locator("button.swal2-confirm").click()
     await message.answer("Proceeding to the next step..")
-    await page.wait_for_selector("div.contact-box", timeout=60000)
+    await page.wait_for_selector("span#email", timeout=60000)
+    print("Found Email", flush=True)
     await page.get_by_text("Continue", exact=True).click()
+    print("Clicked on continue", flush=True)
     await page.wait_for_selector("span#amount", timeout=60000)
     total_amount = await page.locator("span#amount").text_content(timeout=60000)
     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
@@ -906,7 +908,8 @@ async def login(
                         pass
                     await asyncio.sleep(2)
                     continue
-        except TimeoutError:
+        except TimeoutError as e:
+            print(e, flush=True)
             await message.answer("❌ Network Timeout Retrying....")
             await page.close()
             continue
