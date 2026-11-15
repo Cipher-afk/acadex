@@ -670,6 +670,7 @@ async def pay_fee_block(
         callback_buttons=payment_buttons,
         timeout=30000,
     )
+    print(fee_choice, flush=True)
     fee_data = fee_choice.split(":")
     selected_fee_name = fee_data[1]
     selected_fee_price = fee_data[2]
