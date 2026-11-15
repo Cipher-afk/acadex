@@ -734,7 +734,7 @@ async def pay_fee_block(
     )
     info_confirmation_choice = await ask_for_wait(
         message=message,
-        text="You are about to pay {total_amount} for {selected_fee_name} fee block\nPlease confirm that these details are correct",
+        text=f"You are about to pay {total_amount} for {selected_fee_name} fee block\nPlease confirm that these details are correct",
         callback_buttons=info_confirmation_buttons,
         timeout=30000,
     )
@@ -743,7 +743,7 @@ async def pay_fee_block(
             "Payment Failed You can try again after resolving your details"
         )
         return
-    await frame.locator("img.monify").click()
+    await frame.get_by_title("Click to Pay with Remita").click()
     await frame.locator("button.paymentbtn").wait_for(timeout=60000)
     email = await frame.locator("span#email").text_content()
     await frame.locator("button.paymentbtn").click()
