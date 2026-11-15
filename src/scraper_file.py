@@ -656,7 +656,7 @@ async def pay_fee_block(
             timeout=60000
         )
         print(fee_name, flush=True)
-        fee_price = await fee.locator("span.fw-  bolder").first.text_content(
+        fee_price = await fee.locator("span.fw-bolder").first.text_content(
             timeout=60000
         )
         button_info.append(
