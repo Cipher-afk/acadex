@@ -17,7 +17,7 @@ def verify_password(password, hashed_password):
 
 async def ask_for_wait(message:Message,text,callback_buttons,timeout=30000):
     user_id = message.from_user.id
-    future = await asyncio.get_event_loop().create_future()
+    future = asyncio.get_running_loop().create_future()
     future_sessions[user_id] = future
     await message.answer(text,reply_markup=callback_buttons)
     try:
