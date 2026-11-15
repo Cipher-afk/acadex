@@ -711,8 +711,9 @@ async def pay_fee_block(
         return
     await popup_div.locator("button.swal2-confirm").click()
     await message.answer("Proceeding to the next step..")
-    frame = page.frame_locator('iframe.paypanelframe').first
-    await frame.locator("span#email").wait_for(timeout=60000)
+    frame = page.frame_locator("iframe.paypanelframe").first
+    print(frame, flush=True)
+    await frame.locator("span#payerEmail").wait_for(timeout=60000)
     print("Found Email", flush=True)
     await frame.get_by_text("Continue", exact=True).click()
     print("Clicked on continue", flush=True)
