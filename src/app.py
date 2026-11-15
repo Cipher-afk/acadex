@@ -11,7 +11,7 @@ from scraper_file import main as scraper_main
 import asyncio
 import httpx
 import asyncio
-from tasks import scraping_tasks,future_sessions
+from tasks import scraping_tasks, future_sessions
 from buttons import (
     get_service_buttons,
     create_button,
@@ -40,13 +40,13 @@ marketer_login_button = create_button("Login", "marketer_login")
 marketer_signup_button = create_button("Signup", "signup:marketer")
 
 
-async def generate_payment_link(telegram_username:str,message:Message):
+async def generate_payment_link(telegram_username: str, message: Message):
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
     try:
         level = data["level"]
         user_id = data["username"]
-        referrer = data['referrer']
+        referrer = data["referrer"]
     except KeyError as e:
         print(e)
         await message.answer("Please login before downlaoding")
@@ -56,10 +56,16 @@ async def generate_payment_link(telegram_username:str,message:Message):
     #     reply_markup=services_buttons,
     # )
     if not await payment_verified(
-        user_id=user_id,referrer=referrer, telegram_id=telegram_id, level=level, message=message, bot=bot
+        user_id=user_id,
+        referrer=referrer,
+        telegram_id=telegram_id,
+        level=level,
+        message=message,
+        bot=bot,
     ):
         return False
     return True
+
 
 async def get_marketer_data(marketer: Marketer):
     users_data = await payment_service.get_users_referred_by_marketer(
@@ -115,7 +121,7 @@ Amount Withdrawn = {amount_paid}
 
 
 async def payment_verified(
-    user_id, telegram_id, level: str,referrer:str|None, message: Message, bot: Bot
+    user_id, telegram_id, level: str, referrer: str | None, message: Message, bot: Bot
 ):
     await message.answer("🤖 Bot loading.....")
     if user_id != "kudos.ajao":
@@ -133,7 +139,7 @@ async def payment_verified(
                             "user_id": user_id,
                             "telegram_id": str(telegram_id),
                             "level": str(level),
-                            'referrer':referrer
+                            "referrer": referrer,
                         },
                     )
                     print(res.status_code, res.text, flush=True)
@@ -182,8 +188,10 @@ class WithdrawState(StatesGroup):
     amount_to_withdraw = State()
     telegram_id = State()
 
+
 class RRRCodeState(StatesGroup):
     rrr_code = State()
+
 
 @router.message(Command("start"))
 async def start_command(message: Message):
@@ -251,7 +259,7 @@ async def get_services(message: Message):
     try:
         level = data["level"]
         user_id = data["username"]
-        referrer = data['referrer']
+        referrer = data["referrer"]
     except KeyError as e:
         print(e)
         await message.answer("Please login before downlaoding")
@@ -260,7 +268,7 @@ async def get_services(message: Message):
         "Pick one of the services and enjoy your day while acadex does your work 🥂🛀",
         reply_markup=services_buttons,
     )
-    await generate_payment_link(telegram_username=telegram_username,message=message)
+    await generate_payment_link(telegram_username=telegram_username, message=message)
 
 
 @router.message(Command("marketerApplication"))
@@ -577,14 +585,14 @@ async def get_level(message: Message, state: FSMContext):
             level=level,
             referrer=referrer,
         )
-        print(f'Referrer:{referrer}')
+        print(f"Referrer:{referrer}")
         async with get_session_ctx() as session:
             user = await payment_service.get_user_by_telegram_id(
                 telegram_id=str(telegram_username), session=session
             )
         if user is None:
             user = await payment_service.create_user(user_info=user_info)
-        print(user,flush=True)
+        print(user, flush=True)
         await message.answer(
             "Credentials Saved Pick a service to continue".title(),
             reply_markup=services_buttons,
@@ -595,7 +603,9 @@ async def get_level(message: Message, state: FSMContext):
             text=f"New Login: {username} with level {level} and from {university} referred from {referrer}",
         )
         await save_payment(user_id=username, truth_value="false")
-        await generate_payment_link(telegram_username=str(telegram_username),message=message)
+        await generate_payment_link(
+            telegram_username=str(telegram_username), message=message
+        )
     except TelegramNetworkError:
         await message.answer("Check Your Network and try again".title())
 
@@ -659,13 +669,15 @@ async def get_results(callback: CallbackQuery, bot: Bot):
     telegram_username = str(message.chat.id)
     telegram_id = message.chat.id
     data = await get_userinfo(telegram_username)
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -696,13 +708,15 @@ async def get_result_summary(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -733,13 +747,15 @@ async def get_courses(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -769,13 +785,15 @@ async def get_biodata(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -805,13 +823,15 @@ async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -833,20 +853,23 @@ async def get_admission_forms(callback: CallbackQuery, bot: Bot):
     except TelegramNetworkError:
         await message.answer("Network error try again")
 
-@router.callback_query(F.data == 'pay_fee_block')
-async def pay_fee_block(callback: CallbackQuery,bot:Bot):
+
+@router.callback_query(F.data == "pay_fee_block")
+async def pay_fee_block(callback: CallbackQuery, bot: Bot):
     await callback.answer()
     message = callback.message
     telegram_username = message.chat.id
     data = await get_userinfo(telegram_username)
     telegram_id = message.chat.id
-    if not await generate_payment_link(telegram_username=telegram_username,message=callback.message):
+    if not await generate_payment_link(
+        telegram_username=telegram_username, message=callback.message
+    ):
         return
-    username, password, university,level = (
+    username, password, university, level = (
         data["username"],
         data["password"],
         data["university"],
-        data['level']
+        data["level"],
     )
     await bot.send_message(
         chat_id=7928624104,
@@ -868,64 +891,78 @@ async def pay_fee_block(callback: CallbackQuery,bot:Bot):
     except TelegramNetworkError:
         await message.answer("Network error try again")
 
+
 @router.callback_query(F.data.startswith("fee:"))
-async def pick_fee(callback:CallbackQuery):
-    user_id = callback.from_user.id
+async def pick_fee(callback: CallbackQuery):
+    user_id = callback.message.from_user.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
-        fee_name = callback_data.split(':')[1]
-        fee_price = callback_data.split(':')[2]
-        future.set_result(f'{fee_name}:{fee_price}')
+        fee_name = callback_data.split(":")[1]
+        fee_price = callback_data.split(":")[2]
+        future.set_result(f"{fee_name}:{fee_price}")
     await callback.answer()
-    await callback.message.answer(f'Attempting to pay you {fee_name} of {fee_price} naira')
+    await callback.message.answer(
+        f"Attempting to pay you {fee_name} of {fee_price} naira"
+    )
+
 
 @router.callback_query(F.data.startswith("confirm:"))
-async def pick_confirmation(callback:CallbackQuery):
+async def pick_confirmation(callback: CallbackQuery):
     await callback.answer()
-    user_id = callback.from_user.id
+    user_id = callback.message.from_user.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
-        confirmation = callback_data.split(':')[1]
-        if confirmation == 'true':
-            future.set_result('Confirm')
-            await callback.message.answer('Thank You for confirming Procedding now')
+        confirmation = callback_data.split(":")[1]
+        if confirmation == "true":
+            future.set_result("Confirm")
+            await callback.message.answer("Thank You for confirming Procedding now")
         else:
-            future.set_result('No')
-            await callback.message.answer('Please Go to the school portal or the ICT and confirm your details')
-        
+            future.set_result("No")
+            await callback.message.answer(
+                "Please Go to the school portal or the ICT and confirm your details"
+            )
+
+
 @router.callback_query(F.data.startswith("rrr-confirmed:"))
-async def confirm_rrr(callback:CallbackQuery,state:FSMContext):
+async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     callback_data = callback.data
-    confirmation = callback_data.split(':')[1]
-    if confirmation == 'true':
-        await callback.message.answer('Please Enter Your RRR Code')
+    confirmation = callback_data.split(":")[1]
+    if confirmation == "true":
+        await callback.message.answer("Please Enter Your RRR Code")
         await state.set_state(RRRCodeState.rrr_code)
     else:
-        await callback.message.answer('Please Go to the school portal or the ICT and confirm your details or try again')
+        await callback.message.answer(
+            "Please Go to the school portal or the ICT and confirm your details or try again"
+        )
         return
 
+
 @router.message(RRRCodeState.rrr_code)
-async def save_rrr_code(message:Message):
+async def save_rrr_code(message: Message):
     user_id = message.from_user.id
     future = future_sessions[user_id]
     if future and not future.done():
         rrr_code = message.text
         future.set_result(rrr_code)
 
-@router.callback_query(F.data.startswith('money_sent:'))
-async def money_sent(callback:CallbackQuery):
+
+@router.callback_query(F.data.startswith("money_sent:"))
+async def money_sent(callback: CallbackQuery):
     await callback.answer()
     user_id = callback.from_user.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
-        confirmation = callback_data.split(':')[1]
-        if confirmation == 'true':
-            future.set_result('True')
-            await callback.message.answer('Thank You for confirming the money has been sent')
+        confirmation = callback_data.split(":")[1]
+        if confirmation == "true":
+            future.set_result("True")
+            await callback.message.answer(
+                "Thank You for confirming the money has been sent"
+            )
+
 
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))
 async def stop_scraping(message: Message, state: FSMContext):
