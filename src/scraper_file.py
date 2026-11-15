@@ -577,7 +577,7 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         {"button_name": "Cancel", "button_callback": "confirm:false"},
     ]
     confirmation_buttons = await build_payment_buttons(
-        button_info=confirmation_button_info
+        button_infos=confirmation_button_info
     )
     payment_choice = await ask_for_wait(
         message=message,
@@ -697,7 +697,7 @@ async def pay_fee_block(
         {"button_name": "Cancel", "button_callback": "confirm:false"},
     ]
     confirmation_buttons = await build_payment_buttons(
-        button_info=confirmation_button_info
+        button_infos=confirmation_button_info
     )
     confirmation_choice = await ask_for_wait(
         message=message,
@@ -726,7 +726,7 @@ async def pay_fee_block(
         {"button_name": "Cancel", "button_callback": "confirm:false"},
     ]
     info_confirmation_buttons = await build_payment_buttons(
-        button_info=info_confirmation_button_info
+        button_infos=info_confirmation_button_info
     )
     info_confirmation_choice = await ask_for_wait(
         message=message,
@@ -751,7 +751,7 @@ async def pay_fee_block(
         {"button_name": "Cancel", "button_callback": "rrr-confirmed:false"},
     ]
     confirm_rrr_buttons = await build_payment_buttons(
-        button_info=confirm_rrr_button_info
+        button_infos=confirm_rrr_button_info
     )
     confirm_rrr_choice = await ask_for_wait(
         message=message,
