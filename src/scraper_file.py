@@ -656,7 +656,7 @@ async def pay_fee_block(
             timeout=60000
         )
         print(fee_name, flush=True)
-        fee_price = await fee.locator("span.fw_bolder").first.text_content(
+        fee_price = await fee.locator("span.fw-  bolder").first.text_content(
             timeout=60000
         )
         button_info.append(
@@ -706,7 +706,7 @@ async def pay_fee_block(
     await page.wait_for_selector("div.contact-box", timeout=60000)
     await page.get_by_text("Continue", exact=True).click()
     await page.wait_for_selector("span#amount", timeout=60000)
-    total_amount = await page.locator("span#amount").text_content()
+    total_amount = await page.locator("span#amount").text_content(timeout=60000)
     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
     await bot.send_photo(
         chat_id=message.chat.id,
