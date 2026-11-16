@@ -561,9 +561,12 @@ async def download_admmission_forms(
 
 async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: Message):
     telegram_id = message.chat.id
+    await message.answer('Accepting cookies to use the remita website')
     cookies_accept_button = remita_page.locator("button.site-agreement-button").first
     await cookies_accept_button.click()
+    await message.answer('filling in remita code')
     await remita_page.fill("#mat-input-0", rrr_code)
+    await message.answer('Filled in matric number')
     await remita_page.wait_for_selector("div.payment-summary")
     payment_summary_modal = remita_page.locator("div.payment-summary")
     total_amount = payment_summary_modal.locator("p.total").text_content()
@@ -594,11 +597,14 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         "button.button-primary-large-rounded"
     )
     await payment_button.click()
+    await message.answer('Payment Button Clicked')
+    await message.answer('Getting Account Details....')
     await remita_page.get_by_text("Bank Transfer", exact=True).click()
     await remita_page.wait_for_selector("div.fade-in-up")
     time_when_sent = datetime.now()
     expiry_time = time_when_sent + timedelta(minutes=30)
     account_details_modal = remita_page.locator("div.fade-in-up")
+    await message.answer('Account Details Gotten')
     await remita_page.screenshot(path=Path("remita-screenshot.png"))
     await bot.send_photo(
         chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
@@ -768,7 +774,8 @@ async def pay_fee_block(
         return
     rrr_code = confirm_rrr_choice
     remita_page = await context.new_page()
-    await remita_page.goto("https://www.remita.net/pay-rrr")
+    await remita_page.goto("https://www.remita.net/pay-rrr",wait_until='domcontentloaded')
+    await message.answer('Remita Page Loaded')
     await pay_with_remita(
         remita_page=remita_page, rrr_code=rrr_code, bot=bot, message=message
     )

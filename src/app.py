@@ -947,6 +947,7 @@ async def save_rrr_code(message: Message):
     if future and not future.done():
         rrr_code = message.text
         future.set_result(rrr_code)
+    await message.answer('Remita Code Has Been Received Processing Now...')
 
 
 @router.callback_query(F.data.startswith("money_sent:"))
