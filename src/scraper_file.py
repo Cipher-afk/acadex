@@ -566,6 +566,10 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
     await cookies_accept_button.click()
     try:
         await message.answer('filling in remita code')
+        await remita_page.screenshot(path=Path("remita-screenshot.png"))
+        await bot.send_photo(
+            chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
+        )
         # await remita_page.wait_for_selector('input#mat-input-0',60000)
         # await remita_page.fill("input#mat-input-0", rrr_code)
         await remita_page.get_by_placeholder('Enter RRR').fill(rrr_code)
