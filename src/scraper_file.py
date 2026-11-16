@@ -784,7 +784,7 @@ async def pay_fee_block(
         return
     rrr_code = confirm_rrr_choice
     remita_page = await context.new_page()
-    await remita_page.goto("https://www.remita.net/pay-rrr",wait_until='domcontentloaded')
+    await remita_page.goto("https://www.remita.net/pay/pay-rrr",wait_until='domcontentloaded')
     await message.answer('Remita Page Loaded')
     await pay_with_remita(
         remita_page=remita_page, rrr_code=rrr_code, bot=bot, message=message
