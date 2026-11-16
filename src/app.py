@@ -933,6 +933,7 @@ async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
     if confirmation == "true":
         await callback.message.answer("Please Enter Your RRR Code")
         await state.set_state(RRRCodeState.rrr_code)
+        print('RRR code set',flush=True)
     else:
         await callback.message.answer(
             "Please Go to the school portal or the ICT and confirm your details or try again"
@@ -941,19 +942,22 @@ async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(RRRCodeState.rrr_code)
-async def save_rrr_code(message: Message):
+async def save_rrr_code(message: Message,state:FSMContext):
+    print('State activated',flush=True)
     user_id = message.from_user.id
+    print(user_id,flush=True)
     future = future_sessions[user_id]
     if future and not future.done():
         rrr_code = message.text
+        print(rrr_code,flush=True)
         future.set_result(rrr_code)
     await message.answer('Remita Code Has Been Received Processing Now...')
-
+    await state.clear()
 
 @router.callback_query(F.data.startswith("money_sent:"))
 async def money_sent(callback: CallbackQuery):
     await callback.answer()
-    user_id = callback.from_user.id
+    user_id = callback.message.from_user.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
