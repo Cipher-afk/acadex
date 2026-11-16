@@ -651,6 +651,11 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         )
     except Exception as e:
         print(e, flush=True)
+        await remita_page.screenshot(path=Path("remita-screenshot.png"))
+        await bot.send_photo(
+            chat_id=telegram_id,
+            photo=FSInputFile(Path("remita-screenshot.png")),
+        )
         return
 
 
