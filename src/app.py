@@ -894,7 +894,7 @@ async def pay_fee_block(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data.startswith("fee:"))
 async def pick_fee(callback: CallbackQuery):
-    user_id = callback.message.from_user.id
+    user_id = callback.message.chat.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
@@ -910,7 +910,7 @@ async def pick_fee(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("confirm:"))
 async def pick_confirmation(callback: CallbackQuery):
     await callback.answer()
-    user_id = callback.message.from_user.id
+    user_id = callback.message.chat.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
@@ -944,7 +944,7 @@ async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
 @router.message(RRRCodeState.rrr_code)
 async def save_rrr_code(message: Message,state:FSMContext):
     print('State activated',flush=True)
-    user_id = message.from_user.id
+    user_id = message.chat.id
     print(user_id,flush=True)
     future = future_sessions[user_id]
     if future and not future.done():
