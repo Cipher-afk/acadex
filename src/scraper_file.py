@@ -611,7 +611,7 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         remita_frame = remita_page.frame_locator('iframe.iframe-pop').first
         await remita_frame.locator('a[href="/bank-transfer"]').wait_for(timeout=60000)
         await remita_frame.locator('a[href="/bank-transfer"]').click()
-        await remita_frame.wait_for_selector("div.fade-in-up",timeout=60000)
+        await remita_frame.locator("div.fade-in-up").wait_for(timeout=60000)
         time_when_sent = datetime.now()
         expiry_time = time_when_sent + timedelta(minutes=30)
         account_details_modal = remita_frame.locator("div.fade-in-up")
