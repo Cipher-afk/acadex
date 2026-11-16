@@ -608,17 +608,30 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         await payment_button.click()
         await message.answer('Payment Button Clicked')
         await message.answer('Getting Account Details....')
-        await remita_page.get_by_text('Bank Transfer').wait_for(timeout=70000)
-        await remita_page.locator('a[href="/bank-transfer"]').click()
-        await remita_page.wait_for_selector("div.fade-in-up")
+        remita_frame = await remita_page.frame_locator('iframe.iframe-pop').first
+        await remita_frame.locator('a[href="/bank-transfer"]').wait_for(timeout=60000)
+        await remita_frame.locator('a[href="/bank-transfer"]').click()
+        await remita_frame.wait_for_selector("div.fade-in-up")
         time_when_sent = datetime.now()
         expiry_time = time_when_sent + timedelta(minutes=30)
-        account_details_modal = remita_page.locator("div.fade-in-up")
+        account_details_modal = remita_frame.locator("div.fade-in-up")
+        account_details = await account_details_modal.locator('h3.font-medium').all()
+        details_text = []
+        for detail in account_details:
+            detail_text = await detail.text_content()
+            details_text.append(detail_text)
+        print(details_text,flush=True)
         await message.answer('Account Details Gotten')
         await remita_page.screenshot(path=Path("remita-screenshot.png"))
         await bot.send_photo(
             chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
         )
+        await message.answer(f"""
+Bank Name: {details_text[0]}
+Account Name: {details_text[1]}
+Account Number: {details_text[2]}
+Total Amount: {details_text[3]}
+        """)
         sent_the_money_button = account_details_modal.locator("button.btn-primary")
         sent_the_money_button_info: List[ButtonInfoDict] = [
             {"button_name": "I have sent the money", "button_callback": "money_sent:true"}
