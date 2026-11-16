@@ -564,112 +564,108 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
     await message.answer('Accepting cookies to use the remita website')
     cookies_accept_button = remita_page.locator("button.site-agreement-button").first
     await cookies_accept_button.click()
-    try:
-        await message.answer('filling in remita code')
-        await remita_page.screenshot(path=Path("remita-screenshot.png"))
-        await bot.send_photo(
-            chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
-        )
-        # await remita_page.wait_for_selector('input#mat-input-0',60000)
-        # await remita_page.fill("input#mat-input-0", rrr_code)
-        await remita_page.get_by_placeholder('Enter RRR').fill(rrr_code)
-        await message.answer('Filled in matric number')
-        await asyncio.sleep(2)
-        await remita_page.get_by_role("button", name="Proceed").click()
-        await remita_page.wait_for_selector("div.payment-summary")
-        payment_summary_modal = remita_page.locator("div.payment-summary")
-        total_amount = payment_summary_modal.locator("p.total").text_content()
-        await remita_page.screenshot(path=Path("remita-screenshot.png"))
-        await bot.send_photo(
-            chat_id=telegram_id,
-            photo=FSInputFile(Path("remita-screenshot.png")),
-        )
-        confirmation_button_info: List[ButtonInfoDict] = [
-            {"button_name": "Confirm", "button_callback": "confirm:true"},
-            {"button_name": "Cancel", "button_callback": "confirm:false"},
-        ]
-        confirmation_buttons = await build_payment_buttons(
-            button_infos=confirmation_button_info
-        )
-        payment_choice = await ask_for_wait(
-            message=message,
-            text=f"You are about to pay {total_amount} for your fee block\nPlease confirm that these details are correct",
-            callback_buttons=confirmation_buttons,
-            timeout=30000,
-        )
-        if payment_choice == "No":
-            await message.answer(
-                "Please verify your details and try again later Thank You for using Acadex"
-            )
-            return
-        payment_button = payment_summary_modal.locator(
-            "button.button-primary-large-rounded"
-        )
-        await payment_button.click()
-        await message.answer('Payment Button Clicked')
-        await message.answer('Getting Account Details....')
-        remita_frame = remita_page.frame_locator('iframe.iframe-pop').first
-        await remita_frame.locator('a[href="/bank-transfer"]').wait_for(timeout=60000)
-        await remita_frame.locator('a[href="/bank-transfer"]').click()
-        await remita_frame.locator("div.fade-in-up").wait_for(timeout=60000)
-        time_when_sent = datetime.now()
-        expiry_time = time_when_sent + timedelta(minutes=30)
-        account_details_modal = remita_frame.locator("div.fade-in-up")
-        account_details = await account_details_modal.locator('h3.font-medium').all()
-        details_text = []
-        for detail in account_details:
-            detail_text = await detail.text_content()
-            details_text.append(detail_text)
-        print(details_text,flush=True)
-        await message.answer('Account Details Gotten')
-        await remita_page.screenshot(path=Path("remita-screenshot.png"))
-        await bot.send_photo(
-            chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
-        )
-        await message.answer(f"""
-Bank Name: {details_text[0]}
-Account Name: {details_text[1]}
-Account Number: {details_text[2]}
-Total Amount: {details_text[3]}
-        """)
-        sent_the_money_button = account_details_modal.locator("button.btn-primary")
-        sent_the_money_button_info: List[ButtonInfoDict] = [
-            {"button_name": "I have sent the money", "button_callback": "money_sent:true"}
-        ]
-        sent_the_money_buttons = await build_payment_buttons(
-            button_infos=sent_the_money_button_info
-        )
-        sent_the_money_choice = await ask_for_wait(
-            message=message,
-            text="Have you sent the money to the account details provided above expires in 30mins or send Stop to end the process?",
-            callback_buttons=sent_the_money_buttons,
-            timeout=30000,
-        )
-        if sent_the_money_choice == "True":
-            if datetime.now() >= expiry_time:
-                await message.answer(
-                    "Time Limit Reached for sending the money please try again"
-                )
-                return
-        sent_the_money_button.click()
+
+    await message.answer('filling in remita code')
+    # await remita_page.wait_for_selector('input#mat-input-0',60000)
+    # await remita_page.fill("input#mat-input-0", rrr_code)
+    await remita_page.get_by_placeholder('Enter RRR').fill(rrr_code)
+    await message.answer('Filled in matric number')
+    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await bot.send_photo(
+        chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
+    )
+    await asyncio.sleep(2)
+    await remita_page.get_by_role("button", name="Proceed").click()
+    await remita_page.wait_for_selector("div.payment-summary")
+    payment_summary_modal = remita_page.locator("div.payment-summary")
+    total_amount = await payment_summary_modal.locator("p.total").text_content()
+    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await bot.send_photo(
+        chat_id=telegram_id,
+        photo=FSInputFile(Path("remita-screenshot.png")),
+    )
+    confirmation_button_info: List[ButtonInfoDict] = [
+        {"button_name": "Confirm", "button_callback": "confirm:true"},
+        {"button_name": "Cancel", "button_callback": "confirm:false"},
+    ]
+    confirmation_buttons = await build_payment_buttons(
+        button_infos=confirmation_button_info
+    )
+    payment_choice = await ask_for_wait(
+        message=message,
+        text=f"You are about to pay {total_amount} for your fee block\nPlease confirm that these details are correct",
+        callback_buttons=confirmation_buttons,
+        timeout=30000,
+    )
+    if payment_choice == "No":
         await message.answer(
-            "Remita is Processing your payment please wait for a few minutes.."
-        )
-        await asyncio.sleep(120)
-        await remita_page.screenshot(path=Path("remita-screenshot.png"))
-        await bot.send_photo(
-            chat_id=telegram_id,
-            photo=FSInputFile(Path("remita-screenshot.png")),
-            caption=f"Your Payment Status is as follows if it's still showing pending wait a while or check your portal that is if you actually sent the money 🙂",
-        )
-    except Exception as e:
-        print(e, flush=True)
-        await remita_page.screenshot(path=Path("remita-screenshot.png"))
-        await bot.send_photo(
-            chat_id=telegram_id,
-            photo=FSInputFile(Path("remita-screenshot.png")),
+            "Please verify your details and try again later Thank You for using Acadex"
         )
         return
+    payment_button = payment_summary_modal.locator(
+        "button.button-primary-large-rounded"
+    )
+    await payment_button.click()
+    await message.answer('Payment Button Clicked')
+    await message.answer('Getting Account Details....')
+    remita_frame = remita_page.frame_locator('iframe.iframe-pop').first
+    await remita_frame.locator('a[href="/bank-transfer"]').wait_for(timeout=60000)
+    await remita_frame.locator('a[href="/bank-transfer"]').click()
+    await remita_frame.locator("div.fade-in-up").wait_for(timeout=60000)
+    time_when_sent = datetime.now()
+    expiry_time = time_when_sent + timedelta(minutes=30)
+    account_details_modal = remita_frame.locator("div.fade-in-up")
+    account_details = await account_details_modal.locator('h3.font-medium').all()
+    details_text = []
+    for detail in account_details:
+        detail_text = await detail.text_content()
+        details_text.append(detail_text)
+    print(details_text,flush=True)
+    await message.answer('Account Details Gotten')
+    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await bot.send_photo(
+        chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
+    )
+    await message.answer(f"""
+Bank Name: {details_text[0]}
+
+Account Name: {details_text[1]}
+
+Account Number: {details_text[2]}
+
+Total Amount: {details_text[3]}
+    """)
+    sent_the_money_button = account_details_modal.locator("button.btn-primary")
+    sent_the_money_button_info: List[ButtonInfoDict] = [
+        {"button_name": "I have sent the money", "button_callback": "money_sent:true"}
+    ]
+    sent_the_money_buttons = await build_payment_buttons(
+        button_infos=sent_the_money_button_info
+    )
+    sent_the_money_choice = await ask_for_wait(
+        message=message,
+        text="Have you sent the money to the account details provided above expires in 30mins or send Stop to end the process?",
+        callback_buttons=sent_the_money_buttons,
+        timeout=30000,
+    )
+    if sent_the_money_choice == "True":
+        if datetime.now() >= expiry_time:
+            await message.answer(
+                "Time Limit Reached for sending the money please try again"
+            )
+            return
+    sent_the_money_button.click()
+    await message.answer(
+        "Remita is Processing your payment please wait for a few minutes.."
+    )
+    await asyncio.sleep(120)
+    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await bot.send_photo(
+        chat_id=telegram_id,
+        photo=FSInputFile(Path("remita-screenshot.png")),
+        caption=f"Your Payment Status is as follows if it's still showing pending wait a while or check your portal that is if you actually sent the money 🙂",
+    )
+    
 
 
 async def pay_fee_block(

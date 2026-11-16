@@ -957,7 +957,7 @@ async def save_rrr_code(message: Message,state:FSMContext):
 @router.callback_query(F.data.startswith("money_sent:"))
 async def money_sent(callback: CallbackQuery):
     await callback.answer()
-    user_id = callback.message.from_user.id
+    user_id = callback.message.chat.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
