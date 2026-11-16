@@ -608,7 +608,7 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         await payment_button.click()
         await message.answer('Payment Button Clicked')
         await message.answer('Getting Account Details....')
-        await remita_page.get_by_text('nav[aria-label="Payment methods"]').wait_for(timeout=70000)
+        await remita_page.locator('nav[aria-label="Payment methods"]').wait_for(timeout=70000)
         await remita_page.locator('a[href="/bank-transfer"]').click()
         await remita_page.wait_for_selector("div.fade-in-up")
         time_when_sent = datetime.now()
