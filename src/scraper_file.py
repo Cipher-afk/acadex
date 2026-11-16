@@ -574,6 +574,8 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         # await remita_page.fill("input#mat-input-0", rrr_code)
         await remita_page.get_by_placeholder('Enter RRR').fill(rrr_code)
         await message.answer('Filled in matric number')
+        await asyncio.sleep(2)
+        await remita_page.get_by_text('Proceed',exact=True).click()
         await remita_page.wait_for_selector("div.payment-summary")
         payment_summary_modal = remita_page.locator("div.payment-summary")
         total_amount = payment_summary_modal.locator("p.total").text_content()
