@@ -62,7 +62,7 @@ async def get_menu(
                 print("Toggle clicked")
             await message.answer("Getting Menu....")
             menu = page.locator("div.menu-item.menu-accordion")
-            await message.answer("🤖 Side Menu Clicked")
+            # await message.answer("🤖 Side Menu Clicked")
             return menu, page
         except TimeoutError as e:
             await page.screenshot(path=Path(BASE_DIR, "error1-screenshot.png"))
@@ -91,7 +91,6 @@ async def download_payment_receipts(
     # await message.answer("Payment Receipts Clicked")
     await page.wait_for_selector("div.d-flex.py-3.rounded-1.row.mx-0")
     receipts = page.locator("div.d-flex.py-3.rounded-1.row.mx-0")
-    await message.answer("🧾 Receipts Found")
     # documents = []
     await message.answer(
         "Downloading......\nThis will take a couple of minutes based on your network speed\nSend 'Stop' at any moment to cancel the download"
@@ -561,15 +560,15 @@ async def download_admmission_forms(
 
 async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: Message):
     telegram_id = message.chat.id
-    await message.answer('Accepting cookies to use the remita website')
+    await message.answer("Accepting cookies to use the remita website")
     cookies_accept_button = remita_page.locator("button.site-agreement-button").first
     await cookies_accept_button.click()
 
-    await message.answer('filling in remita code')
+    await message.answer("filling in remita code")
     # await remita_page.wait_for_selector('input#mat-input-0',60000)
     # await remita_page.fill("input#mat-input-0", rrr_code)
-    await remita_page.get_by_placeholder('Enter RRR').fill(rrr_code)
-    await message.answer('Filled in matric number')
+    await remita_page.get_by_placeholder("Enter RRR").fill(rrr_code)
+    await message.answer("Filled in matric number")
     await remita_page.screenshot(path=Path("remita-screenshot.png"))
     await bot.send_photo(
         chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
@@ -606,22 +605,22 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         "button.button-primary-large-rounded"
     )
     await payment_button.click()
-    await message.answer('Payment Button Clicked')
-    await message.answer('Getting Account Details....')
-    remita_frame = remita_page.frame_locator('iframe.iframe-pop').first
+    await message.answer("Payment Button Clicked")
+    await message.answer("Getting Account Details....")
+    remita_frame = remita_page.frame_locator("iframe.iframe-pop").first
     await remita_frame.locator('a[href="/bank-transfer"]').wait_for(timeout=60000)
     await remita_frame.locator('a[href="/bank-transfer"]').click()
     await remita_frame.locator("div.fade-in-up").wait_for(timeout=60000)
     time_when_sent = datetime.now()
     expiry_time = time_when_sent + timedelta(minutes=30)
     account_details_modal = remita_frame.locator("div.fade-in-up")
-    account_details = await account_details_modal.locator('h3.font-medium').all()
+    account_details = await account_details_modal.locator("h3.font-medium").all()
     details_text = []
     for detail in account_details:
         detail_text = await detail.text_content()
         details_text.append(detail_text)
-    print(details_text,flush=True)
-    await message.answer('Account Details Gotten')
+    print(details_text, flush=True)
+    await message.answer("Account Details Gotten")
     await remita_page.screenshot(path=Path("remita-screenshot.png"))
     await bot.send_photo(
         chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
@@ -665,7 +664,6 @@ Total Amount: {details_text[3]}
         photo=FSInputFile(Path("remita-screenshot.png")),
         caption=f"Your Payment Status is as follows if it's still showing pending wait a while or check your portal that is if you actually sent the money 🙂",
     )
-    
 
 
 async def pay_fee_block(
@@ -801,8 +799,10 @@ async def pay_fee_block(
         return
     rrr_code = confirm_rrr_choice
     remita_page = await context.new_page()
-    await remita_page.goto("https://www.remita.net/pay/pay-rrr",wait_until='domcontentloaded')
-    await message.answer('Remita Page Loaded')
+    await remita_page.goto(
+        "https://www.remita.net/pay/pay-rrr", wait_until="domcontentloaded"
+    )
+    await message.answer("Remita Page Loaded")
     await pay_with_remita(
         remita_page=remita_page, rrr_code=rrr_code, bot=bot, message=message
     )
@@ -832,18 +832,14 @@ async def login(
             print("Page opened")
             await message.answer("🔐 Logging you in...")
             await page.fill("#username", username)
-            await message.answer("Username entered")
             await page.get_by_text("Continue").click()
             print("continue clicked")
-            await message.answer("Password page loading...")
             await page.wait_for_selector("#password", timeout=60000)
             await page.fill("#password", password)
-            await message.answer("Password entered")
             await page.click("#btn_login", timeout=60000)
-            await message.answer("Logging in...")
             try:
                 await message.answer("Checking credentials...")
-                await page.wait_for_selector("span.swal2-x-mark", timeout=30000)
+                await page.wait_for_selector("span.swal2-x-mark", timeout=10000)
                 await message.answer("❌ Name and password invalid Try again")
                 return False
             except Exception as e:
@@ -852,15 +848,13 @@ async def login(
                 )
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
-                    await message.answer("Redirecting...")
-
                     # print("redirecting you to home page")
                     if await page.wait_for_selector(
                         ".user_text", timeout=180000, state="visible"
                     ):
                         try:
                             if await page.wait_for_selector(
-                                "span.student_name", state="visible", timeout=50000
+                                "span.student_name", state="visible", timeout=30000
                             ):
                                 print("Student name found", flush=True)
                                 await message.answer(
@@ -875,7 +869,7 @@ async def login(
                                     await page.wait_for_selector(
                                         ".row.g-5.myfeelist",
                                         state="visible",
-                                        timeout=50000,
+                                        timeout=30000,
                                     )
                                     != None
                                 ):
