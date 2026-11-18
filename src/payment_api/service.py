@@ -105,7 +105,7 @@ class PaymentService:
             if not result["status"]:
                 raise HTTPException(status_code=400, detail=result["message"])
             payment_link = result["data"]["authorization_url"]
-            return {"payment_link": payment_link}
+            return {"payment_link": payment_link, "amount": amount}
 
     async def generate_subscription_link(self, metadata: MetaDataDict):
         # marketer = await self.get_marketer_by_telegram_id(telegram_id=telegram_id)
