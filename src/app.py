@@ -135,7 +135,7 @@ async def payment_verified(
                 )
                 payload = InitPayment(
                     user_id=user_id,
-                    telegram_id=telegram_id,
+                    telegram_id=str(telegram_id),
                     level=level,
                     referrer=referrer,
                 )
