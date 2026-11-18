@@ -70,7 +70,6 @@ class PaymentService:
                     callback_buttons=type_choice_buttons,
                 )
                 metadata = {
-                    "type": payload.type,
                     "telegram_id": user.telegram_id,
                     "level": user.level,
                     "user_id": user.user_id,
