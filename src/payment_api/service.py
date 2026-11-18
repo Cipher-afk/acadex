@@ -10,16 +10,78 @@ from aiogram import Bot
 from pprint import pprint
 from datetime import datetime, date, timedelta
 from redis_config import save_payment
-from utils import hash_password, verify_password
+from utils import hash_password, verify_password, ask_for_wait
 from payment_api.database_config import get_session_ctx
 from aiogram.types import Message
+from typing import List
 import httpx
+from buttons import ButtonInfoDict, build_payment_buttons
+from typing import TypedDict
 
 PAYSTACK_SECRET = settings.PAYMENT_SECRET_KEY
 bot = Bot(token=settings.BOT_TOKEN)
 
 
+class MetaDataDict(TypedDict):
+    type: str
+    telegram_id: str
+    user_id: str
+    level: str
+    referrer: str
+
+
 class PaymentService:
+    async def initialize_payment(self, payload: InitPayment, message: Message):
+        async with get_session_ctx() as session:
+            user = await self.get_user_by_telegram_id(
+                telegram_id=payload.telegram_id, session=session
+            )
+            user_id = await self.get_user(user_id=payload.user_id, session=session)
+            if user is None and user_id is None:
+                user = await self.create_user(user_info=payload)
+            else:
+                await self.update_info(
+                    telegram_id=user.telegram_id,
+                    info={"user_id": payload.user_id, "level": payload.level},
+                    session=session,
+                )
+            if (
+                await self.payment_expired(
+                    user_id=user.user_id, telegram_id=user.telegram_id, session=session
+                )
+                == True
+            ):
+                type_choice_button_info: List[ButtonInfoDict] = [
+                    {
+                        "button_name": "Pay per semester",
+                        "button_callback": "pay:semester",
+                    },
+                    {
+                        "button_name": "Pay per session",
+                        "button_callback": "pay:session",
+                    },
+                ]
+                type_choice_buttons = await build_payment_buttons(
+                    button_infos=type_choice_button_info
+                )
+                type_choice = await ask_for_wait(
+                    message=message,
+                    text="Pick a plan you want to pay for\n\nPer Semester for 500 naira\n\nPer Session for 1000 naira",
+                    callback_buttons=type_choice_buttons,
+                )
+                metadata = {
+                    "type": payload.type,
+                    "telegram_id": user.telegram_id,
+                    "level": user.level,
+                    "user_id": user.user_id,
+                    "type": type_choice,
+                }
+                payment_link_data = await self.generate_subscription_link(
+                    metadata=metadata
+                )
+                return payment_link_data
+            return {"payment_link": None}
+
     async def generate_payment_link(self, amount: int, metadata: dict):
         headers = {
             "Authorization": f"Bearer {settings.PAYMENT_SECRET_KEY}",
@@ -46,14 +108,18 @@ class PaymentService:
             payment_link = result["data"]["authorization_url"]
             return {"payment_link": payment_link}
 
-    async def generate_marketer_payment_link(self, telegram_id: str):
-        metadata = {"type": "marketer", "telegram_id": telegram_id}
+    async def generate_subscription_link(self, metadata: MetaDataDict):
         # marketer = await self.get_marketer_by_telegram_id(telegram_id=telegram_id)
         # if marketer.subscribed:
         #     return {'payment_link':None}
-        payment_link_data = await self.generate_payment_link(
-            amount=500, metadata=metadata
-        )
+        if metadata["type"] == "semester":
+            payment_link_data = await self.generate_payment_link(
+                amount=500, metadata=metadata
+            )
+        else:
+            payment_link_data = await self.generate_payment_link(
+                amount=1000, metadata=metadata
+            )
         return payment_link_data
 
     async def verify_signature(self, body: bytes, signature: str | None) -> bool:
@@ -126,11 +192,9 @@ class PaymentService:
             statement = select(User).where(User.referrer == marketer_username)
             results = await session.execute(statement=statement)
             users = results.scalars().all()
-            print(users,flush=True)
+            print(users, flush=True)
             paid_users = (
-                filter(lambda user: user.is_paid == True, users)
-                if users
-                else None
+                filter(lambda user: user.is_paid == True, users) if users else None
             )
             return {
                 "all_users": len(users) if users else 0,
@@ -147,32 +211,25 @@ class PaymentService:
         event = payload.get("event")
         data = payload.get("data")
         if event == "charge.success":
-            metadata = data.get("metadata")
-            if metadata.get("type") == "user":
-                user_id = metadata.get("user_id")
-                telegram_id = metadata.get("telegram_id")
-                level = metadata.get("level")
-                if not telegram_id:
-                    await bot.send_message(
-                        chat_id=int(telegram_id), text="Payment Failed"
-                    )
-                    return {"status": "ignored"}
-                await self.update_info(
-                    telegram_id=telegram_id, info={"is_paid": True}, session=session
-                )
-                await save_payment(user_id=user_id, truth_value="truth")
-            else:
-                telegram_id = metadata.get("telegram_id")
-                marketer = await self.get_marketer_by_telegram_id(
-                    telegram_id=telegram_id
-                )
-                updated = await self.update_marketer_info(
-                    marketer=marketer, info={"subscribed": True}
-                )
-                if not updated:
-                    await bot.send_message(
-                        chat_id=int(telegram_id), text="Payment Failed Try Again"
-                    )
+            metadata: MetaDataDict = data.get("metadata")
+            user_id = metadata.get("user_id")
+            telegram_id = metadata.get("telegram_id")
+            level = metadata.get("level")
+            if not telegram_id:
+                await bot.send_message(chat_id=int(telegram_id), text="Payment Failed")
+                return {"status": "ignored"}
+            current_time = datetime.now()
+            expiry_date = current_time + (
+                timedelta(weeks=16)
+                if metadata["type"] == "semester"
+                else timedelta(weeks=24)
+            )
+            await self.update_info(
+                telegram_id=telegram_id,
+                info={"is_paid": True, "expiry": expiry_date},
+                session=session,
+            )
+            await save_payment(user_id=user_id, truth_value="truth")
             await bot.send_message(
                 chat_id=int(telegram_id), text="Payment Verified Successfully"
             )

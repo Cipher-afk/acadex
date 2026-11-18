@@ -5,7 +5,7 @@ from aiogram.types import Message, FSInputFile, CallbackQuery
 from config import settings
 from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
-from utils import hash_password, verify_password
+from utils import hash_password, verify_password, ask_for_wait
 from redis_config import save_userinfo, get_userinfo, get_payment, save_payment
 from scraper_file import main as scraper_main
 import asyncio
@@ -19,6 +19,8 @@ from buttons import (
     get_access_buttons,
     get_withdraw_refresh_buttons,
     confirm_retry_buttons,
+    build_payment_buttons,
+    ButtonInfoDict,
 )
 from payment_api.service import PaymentService
 from payment_api.models import MarketerModel, InitPayment
@@ -132,24 +134,23 @@ async def payment_verified(
                     "Tried sending request cause payment wasn't gotten from redis",
                     flush=True,
                 )
-                async with httpx.AsyncClient(timeout=timeout) as client:
-                    res = await client.post(
-                        f"{DOMAIN_NAME}/init-payment",
-                        json={
-                            "user_id": user_id,
-                            "telegram_id": str(telegram_id),
-                            "level": str(level),
-                            "referrer": referrer,
-                        },
-                    )
-                    print(res.status_code, res.text, flush=True)
-                    payment_link = res.json()["payment_link"]
-                    if payment_link is not None:
-                        message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
-                        await bot.send_message(chat_id=message.chat.id, text=message_)
-                        return False
-                    print("Payment is None", flush=True)
-                    return True
+                payload = InitPayment(
+                    user_id=user_id,
+                    telegram_id=telegram_id,
+                    level=level,
+                    referrer=referrer,
+                )
+                res = await payment_service.initialize_payment(
+                    payload=payload, message=message
+                )
+                print(res.status_code, res.text, flush=True)
+                payment_link = res["payment_link"]
+                if payment_link is not None:
+                    message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
+                    await bot.send_message(chat_id=message.chat.id, text=message_)
+                    return False
+                print("Payment is None", flush=True)
+                return True
             except Exception as e:
                 await message.answer("Network Error try again")
                 print(e)
@@ -933,7 +934,7 @@ async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
     if confirmation == "true":
         await callback.message.answer("Please Enter Your RRR Code")
         await state.set_state(RRRCodeState.rrr_code)
-        print('RRR code set',flush=True)
+        print("RRR code set", flush=True)
     else:
         await callback.message.answer(
             "Please Go to the school portal or the ICT and confirm your details or try again"
@@ -942,17 +943,18 @@ async def confirm_rrr(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(RRRCodeState.rrr_code)
-async def save_rrr_code(message: Message,state:FSMContext):
-    print('State activated',flush=True)
+async def save_rrr_code(message: Message, state: FSMContext):
+    print("State activated", flush=True)
     user_id = message.chat.id
-    print(user_id,flush=True)
+    print(user_id, flush=True)
     future = future_sessions[user_id]
     if future and not future.done():
         rrr_code = message.text
-        print(rrr_code,flush=True)
+        print(rrr_code, flush=True)
         future.set_result(rrr_code)
-    await message.answer('Remita Code Has Been Received Processing Now...')
+    await message.answer("Remita Code Has Been Received Processing Now...")
     await state.clear()
+
 
 @router.callback_query(F.data.startswith("money_sent:"))
 async def money_sent(callback: CallbackQuery):
@@ -967,6 +969,20 @@ async def money_sent(callback: CallbackQuery):
             await callback.message.answer(
                 "Thank You for confirming the money has been sent"
             )
+
+
+@router.callback_query(F.data.startswith("pay:"))
+async def save_payment_type(callback: CallbackQuery):
+    await callback.answer()
+    user_id = callback.message.id
+    future = future_sessions[user_id]
+    if future and not future.done():
+        callback_data = callback.data
+        type_choice = callback_data.split(":")[1]
+        future.set_result(type_choice)
+        await callback.message.answer(
+            f"Getting payment link for per {type_choice} subscription"
+        )
 
 
 @stop_router.message(F.text.in_({"stop", "Stop", "STOP"}))

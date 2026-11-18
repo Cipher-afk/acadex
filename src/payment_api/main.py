@@ -27,6 +27,7 @@ app = FastAPI(lifespan=lifespan)
 async def check_health():
     return {"status": "ok"}
 
+
 @app.post("/init-payment")
 async def initialize_payment(
     payload: InitPayment, session: AsyncSession = Depends(get_session)
@@ -50,14 +51,16 @@ async def initialize_payment(
         == True
     ):
         metadata = {
-                'type':'user',
-                "telegram_id": user.telegram_id,
-                "level": user.level,
-                "user_id": user.user_id,
-            }
-        payment_link_data = await service.generate_payment_link(amount=1000,metadata=metadata)
+            "type": payload.type,
+            "telegram_id": user.telegram_id,
+            "level": user.level,
+            "user_id": user.user_id,
+        }
+        payment_link_data = await service.generate_payment_link(
+            amount=1000, metadata=metadata
+        )
         return payment_link_data
-    return {'payment_link':None}
+    return {"payment_link": None}
 
 
 @app.post("/webhooks/paystack")
