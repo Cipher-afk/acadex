@@ -128,7 +128,6 @@ async def payment_verified(
     await message.answer("🤖 Bot loading.....")
     if user_id != "kudos.ajao":
         if not await get_payment(user_id=user_id):
-            timeout = httpx.Timeout(connect=6.0, read=10.0, write=6.0, pool=5.0)
             try:
                 print(
                     "Tried sending request cause payment wasn't gotten from redis",
@@ -143,7 +142,6 @@ async def payment_verified(
                 res = await payment_service.initialize_payment(
                     payload=payload, message=message
                 )
-                print(res.status_code, res.text, flush=True)
                 payment_link = res["payment_link"]
                 if payment_link is not None:
                     message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
@@ -153,7 +151,7 @@ async def payment_verified(
                 return True
             except Exception as e:
                 await message.answer("Network Error try again")
-                print(e)
+                print(e,flush=True)
         print("Got from redis it was true", flush=True)
         return True
     return True
