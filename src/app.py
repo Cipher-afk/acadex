@@ -144,7 +144,7 @@ async def payment_verified(
                 )
                 payment_link = res["payment_link"]
                 if payment_link is not None:
-                    message_ = f"Please procced with your payment of 1000 naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
+                    message_ = f"Please procced with your payment of {res['amount']} naira here for a session of complete freedom 😌: {payment_link}\n Note: All features will be unlocked immediately upon successful payment"
                     await bot.send_message(chat_id=message.chat.id, text=message_)
                     return False
                 print("Payment is None", flush=True)
