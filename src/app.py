@@ -151,7 +151,7 @@ async def payment_verified(
                 return True
             except Exception as e:
                 await message.answer("Network Error try again")
-                print(e,flush=True)
+                print(e, flush=True)
         print("Got from redis it was true", flush=True)
         return True
     return True
@@ -972,7 +972,7 @@ async def money_sent(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("pay:"))
 async def save_payment_type(callback: CallbackQuery):
     await callback.answer()
-    user_id = callback.message.id
+    user_id = callback.message.chat.id
     future = future_sessions[user_id]
     if future and not future.done():
         callback_data = callback.data
