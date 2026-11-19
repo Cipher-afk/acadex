@@ -66,7 +66,7 @@ class PaymentService:
                 )
                 type_choice = await ask_for_wait(
                     message=message,
-                    text="Pick a plan you want to pay for\n\nPer Semester for 500 naira\n\nPer Session for 1000 naira",
+                    text="Pick a plan you want to pay for to unlock all services for a time period 🥳🥂\n\nPer Semester for 500 naira\n\nPer Session for 1000 naira",
                     callback_buttons=type_choice_buttons,
                 )
                 metadata = {
