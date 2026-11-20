@@ -616,6 +616,7 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
     time_when_sent = datetime.now()
     expiry_time = time_when_sent + timedelta(minutes=30)
     account_details_modal = remita_frame.locator("div.fade-in-up")
+    await asyncio.sleep(3)
     account_details = await account_details_modal.locator("h3.font-medium").all()
     details_text = []
     for detail in account_details:
