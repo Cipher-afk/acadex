@@ -574,6 +574,8 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
     )
     await asyncio.sleep(2)
+    await remita_page.get_by_role("button",name="Save Preferences").click()
+    await asyncio.sleep(2)
     await remita_page.get_by_role("button", name="Proceed").click()
     await remita_page.wait_for_selector("div.payment-summary")
     payment_summary_modal = remita_page.locator("div.payment-summary")
