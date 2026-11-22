@@ -38,8 +38,10 @@ async def get_userinfo(telegram_username: str):
 #     await red.set(f"paid:{telegram_id}", "false")
 
 
-async def save_payment(user_id: str, truth_value: str):
-    await red.set(f"paid:{user_id}", truth_value, ex=TTL)
+async def save_payment(user_id: str, truth_value: str, ttl_seconds: int | None = None):
+    # Existing callers retain the original 24-week default. Payment activation
+    # can supply the exact semester/session duration.
+    await red.set(f"paid:{user_id}", truth_value, ex=ttl_seconds or TTL)
 
 
 async def get_payment(user_id: str):

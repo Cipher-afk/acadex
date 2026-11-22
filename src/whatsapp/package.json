@@ -1,0 +1,16 @@
+{
+  "name": "acadex-whatsapp-baileys",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Additive Baileys WhatsApp adapter for the existing Acadex Python backend",
+  "scripts": { "start": "node src/index.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.24",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

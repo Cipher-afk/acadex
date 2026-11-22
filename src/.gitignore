@@ -5,3 +5,4 @@ __init__.py
 .pyc
 __pycache__
 *.db
+.jobs/

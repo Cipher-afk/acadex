@@ -26,7 +26,7 @@ class MetaDataDict(TypedDict):
     type: str
     telegram_id: str
     user_id: str
-    level: str
+    level: int
     referrer: str
 
 
@@ -36,8 +36,10 @@ class PaymentService:
             user = await self.get_user_by_telegram_id(
                 telegram_id=payload.telegram_id, session=session
             )
-            user_id = await self.get_user(user_id=payload.user_id, session=session)
-            if user is None and user_id is None:
+            # A portal username may be used on more than one channel. The
+            # telegram_id is the channel identity, so never update another
+            # channel's row merely because its portal username matches.
+            if user is None:
                 user = await self.create_user(user_info=payload)
             else:
                 await self.update_info(
@@ -94,7 +96,7 @@ class PaymentService:
             "metadata": metadata,
         }
 
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient() as client:
             res = await client.post(
                 "https://api.paystack.co/transaction/initialize",
                 headers=headers,
@@ -205,38 +207,90 @@ class PaymentService:
             }
 
     async def verify_payment(self, body: bytes, session: AsyncSession):
+        """Apply a verified Paystack success event to the correct channel user.
+
+        Legacy events without a channel remain Telegram events, preserving the
+        existing bot's payment metadata contract.
+        """
         payload: dict = json.loads(body)
-        pprint(payload)
         event = payload.get("event")
-        data = payload.get("data")
-        if event == "charge.success":
-            metadata: MetaDataDict = data.get("metadata")
-            user_id = metadata.get("user_id")
-            telegram_id = metadata.get("telegram_id")
-            level = metadata.get("level")
-            if not telegram_id:
-                await bot.send_message(chat_id=int(telegram_id), text="Payment Failed")
-                return {"status": "ignored"}
-            current_time = datetime.now()
-            expiry_date = current_time + (
-                timedelta(weeks=16)
-                if metadata["type"] == "semester"
-                else timedelta(weeks=24)
-            )
-            await self.update_info(
-                telegram_id=telegram_id,
-                info={"is_paid": True, "expiry": expiry_date},
-                session=session,
-            )
-            await save_payment(user_id=user_id, truth_value="truth")
-            await bot.send_message(
-                chat_id=int(telegram_id), text="Payment Verified Successfully"
-            )
-            return {"Payed": "Successfully"}
+        data = payload.get("data") or {}
+        if event != "charge.success":
+            return {"status": "ignored", "reason": "unsupported_event"}
+
+        metadata = data.get("metadata") or {}
+        telegram_id = metadata.get("telegram_id")
+        user_id = metadata.get("user_id")
+        plan_type = metadata.get("type")
+        if not telegram_id or not user_id or plan_type not in {"semester", "session"}:
+            return {"status": "ignored", "reason": "incomplete_metadata"}
+
+        channel = metadata.get("channel") or (
+            "whatsapp" if str(telegram_id).startswith("wa:") else "telegram"
+        )
+        expected_amount = 50000 if plan_type == "semester" else 100000
+        amount = data.get("amount")
+        if amount is not None and int(amount) != expected_amount:
+            return {"status": "ignored", "reason": "amount_mismatch"}
+        if data.get("currency") and data.get("currency") != "NGN":
+            return {"status": "ignored", "reason": "currency_mismatch"}
+        if data.get("status") and data.get("status") != "success":
+            return {"status": "ignored", "reason": "transaction_not_successful"}
+
+        # Paystack can retry webhook delivery. Avoid extending the same payment
+        # repeatedly when the same reference is delivered more than once.
+        reference = data.get("reference")
+        if reference:
+            from redis_config import red
+            if await red.get(f"paystack:processed:{reference}"):
+                return {"status": "already_processed"}
+
+        current_time = datetime.now()
+        expiry_date = current_time + (
+            timedelta(weeks=16) if plan_type == "semester" else timedelta(weeks=24)
+        )
+        user = await self.get_user_by_telegram_id(str(telegram_id), session)
+        if user is None or user.user_id != user_id:
+            return {"status": "ignored", "reason": "user_not_found_or_mismatch"}
+
+        # A portal account can have one Telegram row and one or more WhatsApp
+        # rows. Keep the subscription fields synchronized across all channel IDs.
+        related_result = await session.execute(select(User).where(User.user_id == user_id))
+        related_users = related_result.scalars().all()
+        for related_user in related_users:
+            related_user.is_paid = True
+            related_user.expiry = expiry_date
+            related_user.level = int(metadata.get("level") or related_user.level)
+        await session.commit()
+        paid_ttl = int((timedelta(weeks=16 if plan_type == "semester" else 24)).total_seconds())
+        await save_payment(user_id=user_id, truth_value="truth", ttl_seconds=paid_ttl)
+        if reference:
+            from redis_config import red
+            await red.set(f"paystack:processed:{reference}", "1", ex=60 * 60 * 24 * 365)
+
+        if channel == "whatsapp":
+            phone = metadata.get("whatsapp_id") or str(telegram_id).removeprefix("wa:")
+            gateway_url = __import__("os").getenv("WHATSAPP_GATEWAY_URL", "").rstrip("/")
+            gateway_token = __import__("os").getenv("WHATSAPP_GATEWAY_TOKEN", "")
+            if phone and gateway_url and gateway_token:
+                try:
+                    async with httpx.AsyncClient(timeout=20) as client:
+                        await client.post(
+                            f"{gateway_url}/send",
+                            json={"to": phone, "text": "✅ Payment verified successfully! Your Acadex subscription is now active. Send MENU to continue."},
+                            headers={"Authorization": f"Bearer {gateway_token}"},
+                        )
+                except Exception as exc:
+                    print(f"WhatsApp payment notification failed: {exc}", flush=True)
         else:
-            await bot.send_message(
-                chat_id=int(telegram_id), text="Payment Failed Try Again"
-            )
+            try:
+                await bot.send_message(
+                    chat_id=str(telegram_id),
+                    text="✅ Payment Verified Successfully. Your Acadex subscription is now active.",
+                )
+            except Exception as exc:
+                print(f"Telegram payment notification failed: {exc}", flush=True)
+        return {"status": "success", "channel": channel}
 
     async def get_user(self, user_id: str, session: AsyncSession):
         statement = select(User).where(user_id == User.user_id)
@@ -264,18 +318,44 @@ class PaymentService:
     async def payment_expired(
         self, user_id: str, telegram_id: str, session: AsyncSession
     ):
-        user = await self.get_user(user_id=user_id, session=session)
-        if user is None:
+        """Check the shared portal account subscription across channel records."""
+        current_user = await self.get_user_by_telegram_id(telegram_id=telegram_id, session=session)
+        if current_user is None or current_user.user_id != user_id:
             raise HTTPException(status_code=404, detail="User not found")
-        today = datetime.now()
-        if today.date() > user.expiry or user.is_paid == False:
-            user.is_paid = False
+
+        result = await session.execute(select(User).where(User.user_id == user_id))
+        related_users = result.scalars().all()
+        today = datetime.now().date()
+        active_users = [
+            item for item in related_users
+            if item.is_paid and item.expiry is not None and today <= item.expiry
+        ]
+        if active_users:
+            latest_expiry = max(item.expiry for item in active_users)
+            for item in related_users:
+                item.is_paid = True
+                item.expiry = latest_expiry
             await session.commit()
-            await session.refresh(user)
-            await save_payment(user_id=user.user_id, truth_value="false")
-            await bot.send_message(
-                chat_id=telegram_id,
-                text="Payment Expired or Payment hasn't been made".title(),
+            remaining = max((latest_expiry - today).days, 1)
+            await save_payment(
+                user_id=user_id,
+                truth_value="truth",
+                ttl_seconds=remaining * 24 * 60 * 60,
             )
-            return True
-        return False
+            return False
+
+        for item in related_users:
+            item.is_paid = False
+        await session.commit()
+        await save_payment(user_id=user_id, truth_value="false")
+        # This method is used by the Telegram payment flow. Never try to send a
+        # WhatsApp namespaced ID to Telegram's Bot API.
+        if not str(telegram_id).startswith("wa:"):
+            try:
+                await bot.send_message(
+                    chat_id=str(telegram_id),
+                    text="Payment Expired or Payment hasn't been made".title(),
+                )
+            except Exception as exc:
+                print(f"Telegram expiry notification failed: {exc}", flush=True)
+        return True

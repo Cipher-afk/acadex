@@ -6,6 +6,12 @@ from playwright.async_api import (
     Page,
 )
 import asyncio
+import builtins
+import contextvars
+import shutil
+import time
+import uuid
+from contextlib import asynccontextmanager
 from redis_config import get_url, store_url
 from pathlib import Path
 from PIL import Image
@@ -18,7 +24,27 @@ from typing import List
 from utils import ask_for_wait
 from datetime import datetime, timedelta
 
-BASE_DIR = Path(__file__).resolve().parent
+_APP_DIR = Path(__file__).resolve().parent
+
+# Every scrape gets its own private folder for screenshots/PDFs/downloads so two users
+# running at the same time can never overwrite, delete or receive each other's files.
+# BASE_DIR stays a drop-in replacement: `Path(BASE_DIR, "biodata.pdf")` is unchanged at
+# every call site, it just resolves to the running job's folder.
+_job_dir_var: contextvars.ContextVar = contextvars.ContextVar("acadex_job_dir", default=None)
+
+
+class _JobDir(os.PathLike):
+    def __fspath__(self) -> str:
+        return str(_job_dir_var.get() or _APP_DIR)
+
+    def __str__(self) -> str:
+        return self.__fspath__()
+
+    def __truediv__(self, other):
+        return Path(self.__fspath__()) / other
+
+
+BASE_DIR = _JobDir()
 
 UNIVERSITIES_PERMITTED = {
     "FUO": "https://ecampus.fuotuoke.edu.ng/ecampus/login.html",
@@ -569,21 +595,19 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
     # await remita_page.fill("input#mat-input-0", rrr_code)
     await remita_page.get_by_placeholder("Enter RRR").fill(rrr_code)
     await message.answer("Filled in matric number")
-    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await remita_page.screenshot(path=Path(BASE_DIR, "remita-screenshot.png"))
     await bot.send_photo(
-        chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
+        chat_id=telegram_id, photo=FSInputFile(Path(BASE_DIR, "remita-screenshot.png"))
     )
-    await asyncio.sleep(2)
-    await remita_page.get_by_role("button",name="Save Preferences").click()
     await asyncio.sleep(2)
     await remita_page.get_by_role("button", name="Proceed").click()
     await remita_page.wait_for_selector("div.payment-summary")
     payment_summary_modal = remita_page.locator("div.payment-summary")
     total_amount = await payment_summary_modal.locator("p.total").text_content()
-    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await remita_page.screenshot(path=Path(BASE_DIR, "remita-screenshot.png"))
     await bot.send_photo(
         chat_id=telegram_id,
-        photo=FSInputFile(Path("remita-screenshot.png")),
+        photo=FSInputFile(Path(BASE_DIR, "remita-screenshot.png")),
     )
     confirmation_button_info: List[ButtonInfoDict] = [
         {"button_name": "Confirm", "button_callback": "confirm:true"},
@@ -616,7 +640,6 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
     time_when_sent = datetime.now()
     expiry_time = time_when_sent + timedelta(minutes=30)
     account_details_modal = remita_frame.locator("div.fade-in-up")
-    await asyncio.sleep(3)
     account_details = await account_details_modal.locator("h3.font-medium").all()
     details_text = []
     for detail in account_details:
@@ -624,9 +647,9 @@ async def pay_with_remita(remita_page: Page, rrr_code: str, bot: Bot, message: M
         details_text.append(detail_text)
     print(details_text, flush=True)
     await message.answer("Account Details Gotten")
-    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await remita_page.screenshot(path=Path(BASE_DIR, "remita-screenshot.png"))
     await bot.send_photo(
-        chat_id=telegram_id, photo=FSInputFile(Path("remita-screenshot.png"))
+        chat_id=telegram_id, photo=FSInputFile(Path(BASE_DIR, "remita-screenshot.png"))
     )
     await message.answer(f"""
 Bank Name: {details_text[0]}
@@ -661,10 +684,10 @@ Total Amount: {details_text[3]}
         "Remita is Processing your payment please wait for a few minutes.."
     )
     await asyncio.sleep(120)
-    await remita_page.screenshot(path=Path("remita-screenshot.png"))
+    await remita_page.screenshot(path=Path(BASE_DIR, "remita-screenshot.png"))
     await bot.send_photo(
         chat_id=telegram_id,
-        photo=FSInputFile(Path("remita-screenshot.png")),
+        photo=FSInputFile(Path(BASE_DIR, "remita-screenshot.png")),
         caption=f"Your Payment Status is as follows if it's still showing pending wait a while or check your portal that is if you actually sent the money 🙂",
     )
 
@@ -948,6 +971,141 @@ async def login(
             continue
 
 
+# --------------------------------------------------------------------------------------
+# Concurrency: one shared Chromium, one isolated BrowserContext per scrape, and a cap on
+# how many scrapes run at once (extra requests wait in a queue and are told so).
+# --------------------------------------------------------------------------------------
+MAX_CONCURRENT_SCRAPES = max(1, int(os.getenv("MAX_CONCURRENT_SCRAPES", "2")))
+# Safety net so a stuck page or an ignored prompt can't hold a slot forever.
+SCRAPE_JOB_TIMEOUT = int(os.getenv("SCRAPE_JOB_TIMEOUT", "1800"))
+# Chromium grows over time; restart it (only while idle) after this many jobs.
+BROWSER_RECYCLE_AFTER = int(os.getenv("BROWSER_RECYCLE_AFTER", "50"))
+
+_LAUNCH_ARGS = ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+if os.getenv("CHROMIUM_SINGLE_PROCESS", "1") != "0":
+    _LAUNCH_ARGS += ["--single-process", "--no-zygote"]
+
+_scrape_slots = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
+_browser_lock = asyncio.Lock()
+_pw = None
+_browser = None
+_active_jobs = 0
+_jobs_on_browser = 0
+
+
+def _sweep_stale_job_dirs():
+    """Remove job folders left behind by a crash (older than 6 hours)."""
+    try:
+        cutoff = time.time() - 6 * 3600
+        for old in Path(_APP_DIR, ".jobs").glob("*"):
+            if old.stat().st_mtime < cutoff:
+                shutil.rmtree(old, ignore_errors=True)
+    except Exception:
+        pass
+
+
+_sweep_stale_job_dirs()
+
+
+async def _get_browser():
+    """Return the shared Chromium, (re)launching it if it is missing or has crashed."""
+    global _pw, _browser, _jobs_on_browser
+    async with _browser_lock:
+        if _browser is None or not _browser.is_connected():
+            if _browser is not None:
+                print("Shared browser disconnected, relaunching")
+            _browser = None
+            for attempt in (1, 2):
+                if _pw is None:
+                    _pw = await async_playwright().start()
+                try:
+                    _browser = await _pw.chromium.launch(headless=True, args=_LAUNCH_ARGS)
+                    break
+                except Exception:
+                    try:
+                        await _pw.stop()
+                    except Exception:
+                        pass
+                    _pw = None
+                    if attempt == 2:
+                        raise
+            _jobs_on_browser = 0
+        _jobs_on_browser += 1
+        return _browser
+
+
+async def _recycle_browser_if_due():
+    global _browser
+    async with _browser_lock:
+        if (
+            _browser is not None
+            and _active_jobs == 0
+            and _jobs_on_browser >= BROWSER_RECYCLE_AFTER
+        ):
+            try:
+                await _browser.close()
+            except Exception:
+                pass
+            _browser = None
+
+
+@asynccontextmanager
+async def _scrape_slot(message):
+    """Wait for a free scrape slot (telling the user they're queued), then hold it."""
+    global _active_jobs
+    if _scrape_slots.locked():
+        try:
+            await message.answer(
+                "⏳ The server is busy with other requests. You're in the queue and will start automatically."
+            )
+        except Exception:
+            pass
+    await _scrape_slots.acquire()
+    _active_jobs += 1
+    try:
+        yield
+    finally:
+        _active_jobs -= 1
+        _scrape_slots.release()
+        try:
+            await _recycle_browser_if_due()
+        except Exception:
+            pass
+
+
+class _Job:
+    context = None
+
+
+@asynccontextmanager
+async def _job_workspace(message):
+    """Private folder + guaranteed context cleanup + overall time limit for one scrape."""
+    job = _Job()
+    job_dir = Path(_APP_DIR, ".jobs", uuid.uuid4().hex)
+    job_dir.mkdir(parents=True, exist_ok=True)
+    token = _job_dir_var.set(job_dir)
+    limit = asyncio.timeout(SCRAPE_JOB_TIMEOUT)
+    try:
+        async with limit:
+            yield job
+    except builtins.TimeoutError:
+        # `TimeoutError` in this module is Playwright's, so the builtin is named explicitly.
+        if not limit.expired():
+            raise
+        try:
+            await message.answer("⏱ This took too long and was stopped. Please try again.")
+        except Exception:
+            pass
+    finally:
+        if job.context is not None:
+            try:
+                await job.context.close()  # only this job's context; the shared browser stays up
+            except Exception:
+                pass
+        _job_dir_var.reset(token)
+        shutil.rmtree(job_dir, ignore_errors=True)
+
+
 async def main(
     username: str,
     password: str,
@@ -956,20 +1114,12 @@ async def main(
     message: Message,
     bot: Bot,
 ):
-    async with async_playwright() as p:
+    async with _scrape_slot(message), _job_workspace(message) as job:
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--single-process",
-                "--no-zygote",
-            ],
-        )
+        browser = await _get_browser()
         context = await browser.new_context()
+        job.context = context  # closed for us on every exit path
         page = await context.new_page()
         if await get_url() == "":
             print("None")
@@ -1050,7 +1200,7 @@ async def main(
                         bot=bot,
                     )
             except asyncio.CancelledError:
-                await browser.close()
+                await context.close()
                 raise
             except TimeoutError as e:
                 await message.answer("❌ Network Timeout Retry")
@@ -1060,7 +1210,7 @@ async def main(
                 scraping_tasks.pop(message.chat.id, None)
         await asyncio.sleep(10)
         print("Browser closing")
-        await browser.close()
+        await context.close()
 
 
 # payments = page.locator("#kt_aside_menu_wrapper menu-title").filter(

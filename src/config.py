@@ -12,11 +12,6 @@ class Settings(BaseSettings):
     DOMAIN_NAME: str
     ADMINS_CODE:str
     ADMINS_TELEGRAM_ID:int
-    WHATSAPP_ACCESS_TOKEN: str | None = None
-    WHATSAPP_PHONE_NUMBER_ID: str | None = None
-    WHATSAPP_VERIFY_TOKEN: str | None = None
-    WHATSAPP_APP_SECRET: str | None = None
-    WHATSAPP_API_VERSION: str = "v23.0"
     model_config = SettingsConfigDict(env_file="./.env", extra="ignore")
 
 
