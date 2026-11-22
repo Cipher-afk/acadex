@@ -276,7 +276,7 @@ async def ensure_whatsapp_database_user(phone: str, profile: dict[str, Any]):
 
 
 async def refresh_whatsapp_subscription(phone: str, username: str) -> bool:
-    profile = await get_userinfo(f"whatsapp:{phone}")
+    profile = await get_userinfo(f"{WA_USER_PREFIX}{phone}")
     if profile:
         await ensure_whatsapp_database_user(phone, profile)
     wa_user_id = f"{WA_USER_PREFIX}{phone}"
@@ -290,7 +290,7 @@ async def refresh_whatsapp_subscription(phone: str, username: str) -> bool:
 
 
 async def launch_scraper(phone: str, action: str):
-    key = f"whatsapp:{phone}"
+    key = f"{WA_USER_PREFIX}{phone}"
     data = await get_userinfo(key)
     if not data:
         await send_text(phone, "Please connect your portal account first. Choose MENU → Connect portal account.")
@@ -429,7 +429,7 @@ async def process_incoming(phone: str, text: str):
         await show_menu(phone, "👋 Welcome to Acadex!")
         return
     if lower in {"subscribe", "subscription", "activate subscription", "pay"}:
-        profile = await get_userinfo(f"whatsapp:{phone}")
+        profile = await get_userinfo(f"{WA_USER_PREFIX}{phone}")
         if not profile or not profile.get("username"):
             await send_text(phone, "Connect your portal account first using MENU → Connect portal account.")
             return
@@ -457,7 +457,7 @@ async def process_incoming(phone: str, text: str):
         if plan not in {"semester", "session"}:
             await send_text(phone, "Please choose Semester or Session from the options.")
             return
-        profile = await get_userinfo(f"whatsapp:{phone}")
+        profile = await get_userinfo(f"{WA_USER_PREFIX}{phone}")
         if not profile or not profile.get("username"):
             await state_clear(phone)
             await send_text(phone, "Your portal profile is missing. Please connect it again from MENU.")
