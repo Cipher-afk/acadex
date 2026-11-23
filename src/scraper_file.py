@@ -857,7 +857,7 @@ async def login(
         try:
             page = await context.new_page()
             if university in UNIVERSITIES_PERMITTED:
-                await page.goto(UNIVERSITIES_PERMITTED[university], timeout=800000)
+                await page.goto(UNIVERSITIES_PERMITTED[university], timeout=800000,wait_until="domcontentloaded")
             else:
                 await message.answer(
                     f"The university {university} is unfortunately not on acadex yet 😞💔"
