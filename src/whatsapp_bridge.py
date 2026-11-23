@@ -410,6 +410,16 @@ async def handle_waiter(phone: str, text: str) -> bool:
         future.set_result("Confirm" if callback.endswith("true") else "No")
     elif callback.startswith("money_sent:"):
         future.set_result("True" if callback.endswith("true") else "False")
+    elif callback.startswith("fee:"):
+        # Telegram's fee callback handler strips the "fee:" prefix and
+        # returns exactly "<fee name>:<price>" to scraper_file.pay_fee_block.
+        # Match that contract here; returning the full callback makes the
+        # scraper look up a fee literally named "fee".
+        _, _, fee_selection = callback.partition(":")
+        if not fee_selection or ":" not in fee_selection:
+            await send_text(phone, "That fee selection is invalid. Please choose a fee again.")
+            return True
+        future.set_result(fee_selection)
     else:
         future.set_result(callback)
     return True

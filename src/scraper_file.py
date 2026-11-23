@@ -728,14 +728,17 @@ async def pay_fee_block(
         timeout=30000,
     )
     try:
+        if not fee_choice:
+            await message.answer("No fee was selected. Please start the fee payment again.")
+            return
         print(fee_choice, flush=True)
-        fee_data = fee_choice.split(":")
+        fee_data = fee_choice.split(":", 1)
         print(fee_data, flush=True)
-        selected_fee_name = fee_data[0]
-        selected_fee_price = fee_data[1]
+        if len(fee_data) != 2:
+            raise ValueError(f"Invalid fee selection returned by ask_for_wait: {fee_choice!r}")
+        selected_fee_name, selected_fee_price = fee_data
         chosen_fee_block: Locator = fee_name_block[selected_fee_name]
         print(chosen_fee_block, flush=True)
-        chosen_fee_block_index = list(fee_name_block.keys()).index(selected_fee_name)
         payment_button = chosen_fee_block.get_by_text("Pay", exact=True)
         print(payment_button, flush=True)
         await payment_button.click()
@@ -743,7 +746,12 @@ async def pay_fee_block(
         popup_div = page.locator(".swal2-popup")
         print(popup_div, flush=True)
     except Exception as e:
-        print(e, flush=True)
+        print(f"Could not prepare fee payment confirmation: {e}", flush=True)
+        await message.answer(
+            "I couldn't open the selected fee's payment confirmation. "
+            "Please try the fee payment again."
+        )
+        return
     await page.screenshot(path=Path(BASE_DIR, "payment-screenshot.png"))
     await bot.send_photo(
         chat_id=message.chat.id,
