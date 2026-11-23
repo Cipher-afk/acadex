@@ -496,6 +496,15 @@ async def process_incoming(phone: str, text: str):
         return
     if step == "password":
         state["password"] = clean
+        wa_user_id = f"{WA_USER_PREFIX}{phone}"
+        async with get_session_ctx() as session:
+            user = await payment_service.get_user_by_telegram_id(telegram_id=wa_user_id,session=session)
+        if user is not None:
+            state['referrer'] = user.referrer or "none"
+            state['step'] = "level"
+            await state_set(phone, state)
+            await send_text(phone,"Enter your current level using numbers only (for example, 100)")
+            return
         state["step"] = "referrer"
         await state_set(phone, state)
         await send_text(phone, "Enter your Acadex referrer name, or type none if you do not have one.")
