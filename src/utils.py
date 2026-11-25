@@ -3,8 +3,19 @@ from datetime import datetime, timedelta
 from aiogram.types import Message
 from tasks import future_sessions
 import asyncio
+from cryptography.fernet import Fernet
+from config import settings
 
 context = CryptContext(["argon2"])
+fernet = Fernet(settings.FERNET_KEY.encode())
+
+
+async def encrypt_portal_password(password: str):
+    return fernet.encrypt(password.encode()).decode()
+
+
+async def decrypt_portal_password(encrypted_password: str):
+    return fernet.decrypt(encrypted_password.encode()).decode()
 
 
 def hash_password(password):
@@ -15,11 +26,12 @@ def hash_password(password):
 def verify_password(password, hashed_password):
     return True if context.verify(password, hashed_password) else False
 
-async def ask_for_wait(message:Message,text,callback_buttons,timeout=30000):
+
+async def ask_for_wait(message: Message, text, callback_buttons, timeout=30000):
     user_id = message.chat.id
     future = asyncio.get_running_loop().create_future()
     future_sessions[user_id] = future
-    await message.answer(text,reply_markup=callback_buttons)
+    await message.answer(text, reply_markup=callback_buttons)
     try:
         return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:

@@ -30,7 +30,9 @@ _APP_DIR = Path(__file__).resolve().parent
 # running at the same time can never overwrite, delete or receive each other's files.
 # BASE_DIR stays a drop-in replacement: `Path(BASE_DIR, "biodata.pdf")` is unchanged at
 # every call site, it just resolves to the running job's folder.
-_job_dir_var: contextvars.ContextVar = contextvars.ContextVar("acadex_job_dir", default=None)
+_job_dir_var: contextvars.ContextVar = contextvars.ContextVar(
+    "acadex_job_dir", default=None
+)
 
 
 class _JobDir(os.PathLike):
@@ -729,13 +731,17 @@ async def pay_fee_block(
     )
     try:
         if not fee_choice:
-            await message.answer("No fee was selected. Please start the fee payment again.")
+            await message.answer(
+                "No fee was selected. Please start the fee payment again."
+            )
             return
         print(fee_choice, flush=True)
         fee_data = fee_choice.split(":", 1)
         print(fee_data, flush=True)
         if len(fee_data) != 2:
-            raise ValueError(f"Invalid fee selection returned by ask_for_wait: {fee_choice!r}")
+            raise ValueError(
+                f"Invalid fee selection returned by ask_for_wait: {fee_choice!r}"
+            )
         selected_fee_name, selected_fee_price = fee_data
         chosen_fee_block: Locator = fee_name_block[selected_fee_name]
         print(chosen_fee_block, flush=True)
@@ -857,7 +863,11 @@ async def login(
         try:
             page = await context.new_page()
             if university in UNIVERSITIES_PERMITTED:
-                await page.goto(UNIVERSITIES_PERMITTED[university], timeout=800000,wait_until="domcontentloaded")
+                await page.goto(
+                    UNIVERSITIES_PERMITTED[university],
+                    timeout=800000,
+                    wait_until="domcontentloaded",
+                )
             else:
                 await message.answer(
                     f"The university {university} is unfortunately not on acadex yet 😞💔"
@@ -1027,7 +1037,9 @@ async def _get_browser():
                 if _pw is None:
                     _pw = await async_playwright().start()
                 try:
-                    _browser = await _pw.chromium.launch(headless=True, args=_LAUNCH_ARGS)
+                    _browser = await _pw.chromium.launch(
+                        headless=True, args=_LAUNCH_ARGS
+                    )
                     break
                 except Exception:
                     try:
@@ -1101,7 +1113,9 @@ async def _job_workspace(message):
         if not limit.expired():
             raise
         try:
-            await message.answer("⏱ This took too long and was stopped. Please try again.")
+            await message.answer(
+                "⏱ This took too long and was stopped. Please try again."
+            )
         except Exception:
             pass
     finally:
@@ -1123,6 +1137,11 @@ async def main(
     bot: Bot,
 ):
     async with _scrape_slot(message), _job_workspace(message) as job:
+        if university == "FUO":
+            await message.answer(
+                "Acadex has been paused in this university due to review from the univeristy bodies\nWe're very sorry for the incovenience 😞💔"
+            )
+            return
         await message.answer("Scrape started")
         await message.answer("Loading...")
         browser = await _get_browser()

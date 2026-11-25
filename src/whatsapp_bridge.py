@@ -3,6 +3,7 @@
 Run on the EXISTING Python/Telegram Oracle instance. It does not edit app.py,
 redis_config.py, scraper_file.py, credentials, or Telegram handlers.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -41,20 +42,25 @@ STATE_TTL = 60 * 60 * 2
 PROMPT_TIMEOUT_CAP = int(os.getenv("WHATSAPP_PROMPT_TIMEOUT", "300"))
 
 if not BRIDGE_TOKEN or not GATEWAY_URL or not GATEWAY_TOKEN:
-    log.warning("WhatsApp bridge env is incomplete; set ACADEX_BRIDGE_TOKEN, WHATSAPP_GATEWAY_URL and WHATSAPP_GATEWAY_TOKEN")
+    log.warning(
+        "WhatsApp bridge env is incomplete; set ACADEX_BRIDGE_TOKEN, WHATSAPP_GATEWAY_URL and WHATSAPP_GATEWAY_TOKEN"
+    )
 
 router = APIRouter(tags=["WhatsApp"])
 payment_service = PaymentService()
 WA_USER_PREFIX = "wa:"
+
 
 class Incoming(BaseModel):
     phone: str
     text: str
     message_id: str | None = None
 
+
 class WhatsAppChat:
     def __init__(self, chat_id: str):
         self.id = chat_id
+
 
 class WhatsAppMessage:
     def __init__(self, phone: str):
@@ -66,23 +72,31 @@ class WhatsAppMessage:
         # by the WhatsApp ask_for_wait adapter below, not silently discarded.
         await safe_send_text(self.chat.id, str(text))
 
+
 class WhatsAppBot:
     async def send_message(self, chat_id: str, text: str, **kwargs):
         await safe_send_text(str(chat_id), str(text))
 
-    async def send_document(self, chat_id: str, document: Any, caption: str | None = None, **kwargs):
+    async def send_document(
+        self, chat_id: str, document: Any, caption: str | None = None, **kwargs
+    ):
         await safe_send_file(str(chat_id), document, caption=caption)
 
-    async def send_photo(self, chat_id: str, photo: Any, caption: str | None = None, **kwargs):
+    async def send_photo(
+        self, chat_id: str, photo: Any, caption: str | None = None, **kwargs
+    ):
         await safe_send_file(str(chat_id), photo, caption=caption)
+
 
 bot_adapter = WhatsAppBot()
 active_tasks: dict[str, asyncio.Task] = {}
 waiters: dict[str, dict[str, Any]] = {}
 background_tasks: set[asyncio.Task] = set()
 
+
 async def send_text(phone: str, text: str):
     await gateway_request({"to": phone, "text": text})
+
 
 async def safe_send_text(phone: str, text: str):
     # Used by the scraper adapters: a transient gateway hiccup must not abort a scrape.
@@ -91,11 +105,13 @@ async def safe_send_text(phone: str, text: str):
     except Exception:
         log.exception("WhatsApp text send failed for %s", phone)
 
+
 async def safe_send_file(phone: str, file_obj: Any, caption: str | None = None):
     try:
         await send_file(phone, file_obj, caption=caption)
     except Exception:
         log.exception("WhatsApp file send failed for %s", phone)
+
 
 async def send_list(
     phone: str,
@@ -125,8 +141,16 @@ async def send_list(
         if description and description != row["title"]:
             line += f" — {description}"
         lines.append(line)
-    lines += ["", "Reply with the number of your choice." if not by_rowid else "Reply with a number, or type the keyword shown."]
+    lines += [
+        "",
+        (
+            "Reply with the number of your choice."
+            if not by_rowid
+            else "Reply with a number, or type the keyword shown."
+        ),
+    ]
     await send_text(phone, "\n".join(lines))
+
 
 async def send_file(phone: str, file_obj: Any, caption: str | None = None):
     path = getattr(file_obj, "path", file_obj)
@@ -136,17 +160,26 @@ async def send_file(phone: str, file_obj: Any, caption: str | None = None):
         return
     data = await asyncio.to_thread(path.read_bytes)
     if len(data) > 12 * 1024 * 1024:
-        await send_text(phone, "The generated file is larger than the WhatsApp adapter's 12MB transfer limit. Please try a smaller request or use Telegram for this file.")
+        await send_text(
+            phone,
+            "The generated file is larger than the WhatsApp adapter's 12MB transfer limit. Please try a smaller request or use Telegram for this file.",
+        )
         return
     import mimetypes
+
     mimetype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    await gateway_request({
-        "to": phone,
-        "mediaBase64": await asyncio.to_thread(lambda: base64.b64encode(data).decode("ascii")),
-        "mimetype": mimetype,
-        "filename": path.name,
-        "caption": caption or "",
-    })
+    await gateway_request(
+        {
+            "to": phone,
+            "mediaBase64": await asyncio.to_thread(
+                lambda: base64.b64encode(data).decode("ascii")
+            ),
+            "mimetype": mimetype,
+            "filename": path.name,
+            "caption": caption or "",
+        }
+    )
+
 
 async def gateway_request(payload: dict[str, Any], retries: int = 2):
     """POST to the Node gateway. Only retries cases where nothing was sent
@@ -171,32 +204,83 @@ async def gateway_request(payload: dict[str, Any], retries: int = 2):
         response.raise_for_status()
         return response.json()
 
+
 async def state_get(phone: str) -> dict[str, Any]:
     raw = await red.get(f"wa:flow:{phone}")
     return json.loads(raw) if raw else {}
 
+
 async def state_set(phone: str, state: dict[str, Any]):
     await red.set(f"wa:flow:{phone}", json.dumps(state), ex=STATE_TTL)
 
+
 async def state_clear(phone: str):
     await red.delete(f"wa:flow:{phone}")
+
 
 async def show_menu(phone: str, intro: str | None = None):
     if intro:
         await send_text(phone, intro)
     rows = [
-        {"title": "Connect portal account", "rowId": "1", "description": "Link your FUO or RSU portal"},
-        {"title": "Download payment receipts", "rowId": "2", "description": "Free for all users"},
-        {"title": "Download results", "rowId": "3", "description": "Requires an active subscription"},
-        {"title": "Get result summary", "rowId": "4", "description": "Requires an active subscription"},
-        {"title": "Registered courses", "rowId": "5", "description": "Requires an active subscription"},
-        {"title": "Download biodata", "rowId": "6", "description": "Requires an active subscription"},
-        {"title": "Admission documents", "rowId": "7", "description": "Requires an active subscription"},
-        {"title": "Pay fee block", "rowId": "8", "description": "Portal fee-block workflow"},
-        {"title": "Activate subscription", "rowId": "SUBSCRIBE", "description": "Unlock paid Acadex services"},
-        {"title": "Marketer account", "rowId": "9", "description": "Sign up or log in to your marketer account"},
+        {
+            "title": "Connect portal account",
+            "rowId": "1",
+            "description": "Link your FUO or RSU portal",
+        },
+        {
+            "title": "Download payment receipts",
+            "rowId": "2",
+            "description": "Free for all users",
+        },
+        {
+            "title": "Download results",
+            "rowId": "3",
+            "description": "Requires an active subscription",
+        },
+        {
+            "title": "Get result summary",
+            "rowId": "4",
+            "description": "Requires an active subscription",
+        },
+        {
+            "title": "Registered courses",
+            "rowId": "5",
+            "description": "Requires an active subscription",
+        },
+        {
+            "title": "Download biodata",
+            "rowId": "6",
+            "description": "Requires an active subscription",
+        },
+        {
+            "title": "Admission documents",
+            "rowId": "7",
+            "description": "Requires an active subscription",
+        },
+        {
+            "title": "Pay fee block",
+            "rowId": "8",
+            "description": "Portal fee-block workflow",
+        },
+        {
+            "title": "Activate subscription",
+            "rowId": "SUBSCRIBE",
+            "description": "Unlock paid Acadex services",
+        },
+        {
+            "title": "Marketer account",
+            "rowId": "9",
+            "description": "Sign up or log in to your marketer account",
+        },
     ]
-    await send_list(phone, "Select a service below. You can also type MENU, HELP, BACK, CANCEL or STOP at any time.", rows, title="Acadex Main Menu", by_rowid=True)
+    await send_list(
+        phone,
+        "Select a service below. You can also type MENU, HELP, BACK, CANCEL or STOP at any time.",
+        rows,
+        title="Acadex Main Menu",
+        by_rowid=True,
+    )
+
 
 SERVICE_MAP = {
     "2": ("payment_receipts", "payment_receipts", True),
@@ -218,6 +302,7 @@ SERVICE_MAP = {
     "pay fee block": ("pay fee block", "pay_fee_block", False),
 }
 
+
 async def ensure_whatsapp_database_user(phone: str, profile: dict[str, Any]):
     """Create/update the channel-specific DB identity from an existing Redis profile.
 
@@ -229,7 +314,11 @@ async def ensure_whatsapp_database_user(phone: str, profile: dict[str, Any]):
         return None
     wa_user_id = f"{WA_USER_PREFIX}{phone}"
     raw_referrer = profile.get("referrer")
-    referrer = raw_referrer if raw_referrer and str(raw_referrer).casefold() != "none" else None
+    referrer = (
+        raw_referrer
+        if raw_referrer and str(raw_referrer).casefold() != "none"
+        else None
+    )
 
     async with get_session_ctx() as session:
         if referrer:
@@ -255,16 +344,26 @@ async def ensure_whatsapp_database_user(phone: str, profile: dict[str, Any]):
         else:
             await payment_service.update_info(
                 wa_user_id,
-                {"user_id": username, "level": int(profile.get("level") or 0), "referrer": referrer},
+                {
+                    "user_id": username,
+                    "level": int(profile.get("level") or 0),
+                    "referrer": referrer,
+                },
                 session,
             )
 
         # If another channel already paid for this portal username, synchronize
         # the new WhatsApp identity with that same subscription.
-        related_result = await session.execute(select(User).where(User.user_id == username))
+        related_result = await session.execute(
+            select(User).where(User.user_id == username)
+        )
         related_users = related_result.scalars().all()
         today = datetime.now().date()
-        active = [u for u in related_users if u.is_paid and u.expiry is not None and today <= u.expiry]
+        active = [
+            u
+            for u in related_users
+            if u.is_paid and u.expiry is not None and today <= u.expiry
+        ]
         if active:
             latest_expiry = max(u.expiry for u in active)
             for related_user in related_users:
@@ -297,24 +396,45 @@ async def launch_scraper(phone: str, action: str):
     key = f"{WA_USER_PREFIX}{phone}"
     data = await get_userinfo(key)
     if not data:
-        await send_text(phone, "Please connect your portal account first. Choose MENU → Connect portal account.")
+        await send_text(
+            phone,
+            "Please connect your portal account first. Choose MENU → Connect portal account.",
+        )
         return
     username = data.get("username")
     if not username:
-        await send_text(phone, "Your saved portal profile is incomplete. Please connect your account again.")
+        await send_text(
+            phone,
+            "Your saved portal profile is incomplete. Please connect your account again.",
+        )
         return
-    if action != "payment_receipts" and not await refresh_whatsapp_subscription(phone, username):
-        await send_text(phone, "This service requires an active Acadex subscription. Send SUBSCRIBE to activate your subscription here on WhatsApp.")
+    if action != "payment_receipts" and not await refresh_whatsapp_subscription(
+        phone, username
+    ):
+        await send_text(
+            phone,
+            "This service requires an active Acadex subscription. Send SUBSCRIBE to activate your subscription here on WhatsApp.",
+        )
         return
     existing = active_tasks.get(phone)
     if existing is not None and not existing.done():
-        await send_text(phone, "You already have an Acadex task running. Send STOP to cancel it.")
+        await send_text(
+            phone, "You already have an Acadex task running. Send STOP to cancel it."
+        )
         return
     message = WhatsAppMessage(phone)
 
     async def run_scrape():
         # Concurrency limits, queueing and per-job file isolation live in scraper_file.main.
-        await safe_send_text(phone, "⏳ Acadex is starting your request. This may take a few minutes.")
+        university = data.get("university", "")
+        if university == "FUO":
+            await safe_send_text(
+                "Acadex has been paused in this university due to review from the univeristy bodies\nWe're very sorry for the incovenience 😞💔"
+            )
+            return
+        await safe_send_text(
+            phone, "⏳ Acadex is starting your request. This may take a few minutes."
+        )
         await scraper_main(
             university=data.get("university", ""),
             username=data.get("username", ""),
@@ -336,7 +456,10 @@ async def launch_scraper(phone: str, action: str):
             await safe_send_text(phone, "Your Acadex operation was stopped.")
         except Exception:
             log.exception("WhatsApp scraper task failed for %s", phone)
-            await safe_send_text(phone, "Acadex encountered an error while processing your request. Please try again later.")
+            await safe_send_text(
+                phone,
+                "Acadex encountered an error while processing your request. Please try again later.",
+            )
         finally:
             if active_tasks.get(phone) is task:
                 active_tasks.pop(phone, None)
@@ -345,23 +468,30 @@ async def launch_scraper(phone: str, action: str):
     background_tasks.add(cleanup_task)
     cleanup_task.add_done_callback(background_tasks.discard)
 
+
 # Adapt the existing scraper's ask_for_wait interaction to WhatsApp replies.
 # This keeps scraper_file.py unchanged and returns the same callback_data values
 # that its existing fee-block workflow expects.
-async def whatsapp_ask_for_wait(message: WhatsAppMessage, text: str, callback_buttons: Any, timeout: int = 30000):
+async def whatsapp_ask_for_wait(
+    message: WhatsAppMessage, text: str, callback_buttons: Any, timeout: int = 30000
+):
     phone = message.chat.id
     buttons = []
     keyboard = getattr(callback_buttons, "inline_keyboard", []) or []
     for row in keyboard:
         for button in row:
-            buttons.append({"text": button.text, "id": button.callback_data or button.text})
+            buttons.append(
+                {"text": button.text, "id": button.callback_data or button.text}
+            )
     future = asyncio.get_running_loop().create_future()
     waiters[phone] = {"future": future, "buttons": buttons, "rrr_input": False}
     if buttons:
-        await send_list(phone, text, [
-            {"title": button["text"], "rowId": button["id"]}
-            for button in buttons
-        ], title="Acadex - confirm your choice")
+        await send_list(
+            phone,
+            text,
+            [{"title": button["text"], "rowId": button["id"]} for button in buttons],
+            title="Acadex - confirm your choice",
+        )
     else:
         await send_text(phone, text)
     try:
@@ -369,14 +499,18 @@ async def whatsapp_ask_for_wait(message: WhatsAppMessage, text: str, callback_bu
         wait_seconds = min(max(float(timeout), 1.0), float(PROMPT_TIMEOUT_CAP))
         return await asyncio.wait_for(future, timeout=wait_seconds)
     except asyncio.TimeoutError:
-        await safe_send_text(phone, "You took too long to respond. The operation timed out.")
+        await safe_send_text(
+            phone, "You took too long to respond. The operation timed out."
+        )
         return None
     finally:
         waiters.pop(phone, None)
 
+
 # Patch only this bridge process's imported scraper module. The Telegram bot runs
 # in its own process and retains its original utils.ask_for_wait implementation.
 scraper_file.ask_for_wait = whatsapp_ask_for_wait
+
 
 async def handle_waiter(phone: str, text: str) -> bool:
     waiter = waiters.get(phone)
@@ -395,7 +529,14 @@ async def handle_waiter(phone: str, text: str) -> bool:
         selected = buttons[int(text) - 1]
     else:
         normalized = text.casefold()
-        selected = next((b for b in buttons if normalized in {b["text"].casefold(), b["id"].casefold()}), None)
+        selected = next(
+            (
+                b
+                for b in buttons
+                if normalized in {b["text"].casefold(), b["id"].casefold()}
+            ),
+            None,
+        )
     if not selected:
         await send_text(phone, "Please choose one of the listed options.")
         return True
@@ -417,14 +558,19 @@ async def handle_waiter(phone: str, text: str) -> bool:
         # scraper look up a fee literally named "fee".
         _, _, fee_selection = callback.partition(":")
         if not fee_selection or ":" not in fee_selection:
-            await send_text(phone, "That fee selection is invalid. Please choose a fee again.")
+            await send_text(
+                phone, "That fee selection is invalid. Please choose a fee again."
+            )
             return True
         future.set_result(fee_selection)
     else:
         future.set_result(callback)
     return True
 
-async def update_marketer_withdrawn_amount(marketer_username: str, amount: float) -> bool:
+
+async def update_marketer_withdrawn_amount(
+    marketer_username: str, amount: float
+) -> bool:
     """Persist the withdrawal total using the existing marketer table/columns."""
     async with get_session_ctx() as session:
         result = await session.execute(
@@ -441,9 +587,13 @@ async def update_marketer_withdrawn_amount(marketer_username: str, amount: float
 async def show_marketer_dashboard(phone: str, marketer: Marketer):
     if marketer.barred:
         await state_clear(phone)
-        await send_text(phone, "This marketer account is restricted. Please contact Acadex support.")
+        await send_text(
+            phone, "This marketer account is restricted. Please contact Acadex support."
+        )
         return
-    referred = await payment_service.get_users_referred_by_marketer(marketer_username=marketer.username)
+    referred = await payment_service.get_users_referred_by_marketer(
+        marketer_username=marketer.username
+    )
     all_users = referred.get("all_users", 0)
     paid_users = referred.get("paid_users", 0)
     gain_made = (1000 * paid_users * 0.2) - (marketer.amount_paid or 0)
@@ -458,7 +608,7 @@ async def show_marketer_dashboard(phone: str, marketer: Marketer):
         f"Gain made: ₦{gain_made:,.2f}\n"
         f"Amount withdrawn: ₦{(marketer.amount_paid or 0):,}\n\n"
         "Send WITHDRAW to request a payout.\n"
-        "Send REFRESH to update your figures or MENU to return."
+        "Send REFRESH to update your figures or MENU to return.",
     )
 
 
@@ -483,19 +633,41 @@ async def process_incoming(phone: str, text: str):
     if lower in {"subscribe", "subscription", "activate subscription", "pay"}:
         profile = await get_userinfo(f"{WA_USER_PREFIX}{phone}")
         if not profile or not profile.get("username"):
-            await send_text(phone, "Connect your portal account first using MENU → Connect portal account.")
+            await send_text(
+                phone,
+                "Connect your portal account first using MENU → Connect portal account.",
+            )
             return
         if await refresh_whatsapp_subscription(phone, profile["username"]):
-            await send_text(phone, "Your Acadex subscription is already active. You can use the paid services now.")
+            await send_text(
+                phone,
+                "Your Acadex subscription is already active. You can use the paid services now.",
+            )
             return
         await state_set(phone, {"step": "subscription_plan"})
-        await send_list(phone, "Choose your Acadex subscription plan.", [
-            {"title": "Per Semester — ₦500", "rowId": "semester", "description": "Unlock paid services for a semester"},
-            {"title": "Per Session — ₦1,000", "rowId": "session", "description": "Unlock paid services for a session"},
-        ], title="Choose subscription")
+        await send_list(
+            phone,
+            "Choose your Acadex subscription plan.",
+            [
+                {
+                    "title": "Per Semester — ₦500",
+                    "rowId": "semester",
+                    "description": "Unlock paid services for a semester",
+                },
+                {
+                    "title": "Per Session — ₦1,000",
+                    "rowId": "session",
+                    "description": "Unlock paid services for a session",
+                },
+            ],
+            title="Choose subscription",
+        )
         return
     if lower == "help":
-        await show_menu(phone, "Acadex supports the services listed below. Follow the prompts; you do not need to memorise commands.")
+        await show_menu(
+            phone,
+            "Acadex supports the services listed below. Follow the prompts; you do not need to memorise commands.",
+        )
         return
     if lower in {"back", "cancel"}:
         await state_clear(phone)
@@ -507,12 +679,17 @@ async def process_incoming(phone: str, text: str):
         first_word = (lower.replace("per ", "").split() or [""])[0]
         plan = {"1": "semester", "2": "session"}.get(first_word, first_word)
         if plan not in {"semester", "session"}:
-            await send_text(phone, "Please choose Semester or Session from the options.")
+            await send_text(
+                phone, "Please choose Semester or Session from the options."
+            )
             return
         profile = await get_userinfo(f"{WA_USER_PREFIX}{phone}")
         if not profile or not profile.get("username"):
             await state_clear(phone)
-            await send_text(phone, "Your portal profile is missing. Please connect it again from MENU.")
+            await send_text(
+                phone,
+                "Your portal profile is missing. Please connect it again from MENU.",
+            )
             return
         wa_user_id = f"{WA_USER_PREFIX}{phone}"
         metadata = {
@@ -525,7 +702,10 @@ async def process_incoming(phone: str, text: str):
         }
         payment_link = await payment_service.generate_subscription_link(metadata)
         await state_clear(phone)
-        await send_text(phone, f"Your {plan} subscription costs ₦{payment_link['amount']:,}. Complete payment securely using this Paystack link:\n{payment_link['payment_link']}\n\nYour subscription will activate after Paystack confirms payment.")
+        await send_text(
+            phone,
+            f"Your {plan} subscription costs ₦{payment_link['amount']:,}. Complete payment securely using this Paystack link:\n{payment_link['payment_link']}\n\nYour subscription will activate after Paystack confirms payment.",
+        )
         return
     if step == "marketer_choice":
         choice = lower.strip()
@@ -545,27 +725,44 @@ async def process_incoming(phone: str, text: str):
             await send_text(phone, "Choose a username between 3 and 40 characters.")
             return
         if await payment_service.get_marketer_by_username(clean):
-            await send_text(phone, "That marketer username is already taken. Please choose another.")
+            await send_text(
+                phone, "That marketer username is already taken. Please choose another."
+            )
             return
         state.update({"marketer_username": clean, "step": "marketer_signup_university"})
         await state_set(phone, state)
-        await send_list(phone, "Choose your university.", [
-            {"title": "Federal University Otuoke", "rowId": "FUO"},
-            {"title": "Rivers State University", "rowId": "RSU"},
-        ], title="Marketer university")
+        await send_list(
+            phone,
+            "Choose your university.",
+            [
+                {"title": "Federal University Otuoke", "rowId": "FUO"},
+                {"title": "Rivers State University", "rowId": "RSU"},
+            ],
+            title="Marketer university",
+        )
         return
 
     if step == "marketer_signup_university":
         choice = lower.replace(" ", "")
-        university = "FUO" if choice in {"1", "fuo", "fuotuoke", "federaluniversityotuoke"} else "RSU" if choice in {"2", "rsu", "riversstateuniversity"} else None
+        university = (
+            "FUO"
+            if choice in {"1", "fuo", "fuotuoke", "federaluniversityotuoke"}
+            else "RSU" if choice in {"2", "rsu", "riversstateuniversity"} else None
+        )
         if not university:
             await send_text(phone, "Choose FUO (1) or RSU (2).")
             return
-        marketers = await payment_service.get_all_marketers_by_university(university=university)
+        marketers = await payment_service.get_all_marketers_by_university(
+            university=university
+        )
         if len(marketers) >= 30:
-            await send_text(phone, "Sorry, the marketer capacity for this university is full.")
+            await send_text(
+                phone, "Sorry, the marketer capacity for this university is full."
+            )
             return
-        state.update({"marketer_university": university, "step": "marketer_signup_password"})
+        state.update(
+            {"marketer_university": university, "step": "marketer_signup_password"}
+        )
         await state_set(phone, state)
         await send_text(phone, "Create your marketer account password.")
         return
@@ -578,37 +775,62 @@ async def process_incoming(phone: str, text: str):
         university = state.get("marketer_university")
         if not username or not university:
             await state_clear(phone)
-            await send_text(phone, "Your signup session expired. Please start again from MENU.")
+            await send_text(
+                phone, "Your signup session expired. Please start again from MENU."
+            )
             return
-        existing_phone_account = await payment_service.get_marketer_by_telegram_id(telegram_id=f"{WA_USER_PREFIX}{phone}")
+        existing_phone_account = await payment_service.get_marketer_by_telegram_id(
+            telegram_id=f"{WA_USER_PREFIX}{phone}"
+        )
         if existing_phone_account:
             await state_clear(phone)
-            await send_text(phone, "A marketer account is already linked to this WhatsApp number. Choose Log in instead.")
+            await send_text(
+                phone,
+                "A marketer account is already linked to this WhatsApp number. Choose Log in instead.",
+            )
             return
         try:
-            marketer = await payment_service.create_marketer(MarketerModel(
-                telegram_id=f"{WA_USER_PREFIX}{phone}", username=username,
-                university=university, password=clean,
-            ))
+            marketer = await payment_service.create_marketer(
+                MarketerModel(
+                    telegram_id=f"{WA_USER_PREFIX}{phone}",
+                    username=username,
+                    university=university,
+                    password=clean,
+                )
+            )
         except Exception:
             log.exception("WhatsApp marketer signup failed for %s", phone)
-            await send_text(phone, "I couldn't create that account. The username may already be taken; please try another.")
+            await send_text(
+                phone,
+                "I couldn't create that account. The username may already be taken; please try another.",
+            )
             return
         await show_marketer_dashboard(phone, marketer)
         return
 
     if step == "marketer_login_username":
-        state.update({"marketer_login_username": clean, "step": "marketer_login_password"})
+        state.update(
+            {"marketer_login_username": clean, "step": "marketer_login_password"}
+        )
         await state_set(phone, state)
         await send_text(phone, "Enter your marketer account password.")
         return
 
     if step == "marketer_login_password":
         username = state.get("marketer_login_username")
-        marketer = await payment_service.get_marketer_by_username(username=username) if username else None
-        if marketer is None or not await payment_service.is_marketer_password(marketer=marketer, password=clean):
+        marketer = (
+            await payment_service.get_marketer_by_username(username=username)
+            if username
+            else None
+        )
+        if marketer is None or not await payment_service.is_marketer_password(
+            marketer=marketer, password=clean
+        ):
             await state_clear(phone)
-            await send_text(phone, "Username or password is incorrect. Send MENU → Marketer account to try again.")
+            await send_text(
+                phone,
+                "Username or password is incorrect. Send MENU → Marketer account to try again.",
+            )
             return
         await show_marketer_dashboard(phone, marketer)
         return
@@ -620,7 +842,10 @@ async def process_incoming(phone: str, text: str):
         elif choice in {"2", "rsu", "riversstateuniversity"}:
             state["university"] = "RSU"
         else:
-            await send_text(phone, "Choose 1 for Federal University Otuoke (FUO) or 2 for Rivers State University (RSU).")
+            await send_text(
+                phone,
+                "Choose 1 for Federal University Otuoke (FUO) or 2 for Rivers State University (RSU).",
+            )
             return
         state["step"] = "username"
         await state_set(phone, state)
@@ -636,7 +861,9 @@ async def process_incoming(phone: str, text: str):
         state["password"] = clean
         wa_user_id = f"{WA_USER_PREFIX}{phone}"
         async with get_session_ctx() as session:
-            user = await payment_service.get_user_by_telegram_id(telegram_id=wa_user_id,session=session)
+            user = await payment_service.get_user_by_telegram_id(
+                telegram_id=wa_user_id, session=session
+            )
         if user is not None:
             # Existing WhatsApp identity: refresh credentials only. Keep the
             # stored level/referrer and the university explicitly selected now.
@@ -656,24 +883,37 @@ async def process_incoming(phone: str, text: str):
                     current_user.user_id = state["username"]
                     await update_session.commit()
             await state_clear(phone)
-            await send_text(phone, "✅ Your portal login details have been updated. Your existing level, referrer and subscription status were preserved.")
+            await send_text(
+                phone,
+                "✅ Your portal login details have been updated. Your existing level, referrer and subscription status were preserved.",
+            )
             await show_menu(phone)
             return
         state["step"] = "referrer"
         await state_set(phone, state)
-        await send_text(phone, "Enter your Acadex referrer name, or type none if you do not have one.")
+        await send_text(
+            phone,
+            "Enter your Acadex referrer name, or type none if you do not have one.",
+        )
         return
     if step == "referrer":
         state["referrer"] = clean if lower != "none" else "none"
         state["step"] = "level"
         await state_set(phone, state)
-        await send_text(phone, "Enter your current level using numbers only (for example, 100).")
+        await send_text(
+            phone, "Enter your current level using numbers only (for example, 100)."
+        )
         return
     if step == "level":
         if not clean.isdigit():
-            await send_text(phone, "Please enter your current level as a number, for example 100.")
+            await send_text(
+                phone, "Please enter your current level as a number, for example 100."
+            )
             return
-        if any(key not in state for key in ("university", "username", "password", "referrer")):
+        if any(
+            key not in state
+            for key in ("university", "username", "password", "referrer")
+        ):
             # Flow state expired or was cleared part-way through; restart cleanly.
             await state_clear(phone)
             await send_text(phone, "Your setup session expired. Let's start again.")
@@ -700,67 +940,116 @@ async def process_incoming(phone: str, text: str):
             referrer=referrer_value or "none",
         )
         # Ensure the existing users table contains this WhatsApp identity.
-        await ensure_whatsapp_database_user(phone, {
-            "username": state["username"],
-            "level": clean,
-            "referrer": referrer_value,
-        })
+        await ensure_whatsapp_database_user(
+            phone,
+            {
+                "username": state["username"],
+                "level": clean,
+                "referrer": referrer_value,
+            },
+        )
         await state_clear(phone)
-        await send_text(phone, "✅ Your portal details have been saved in Acadex. Your WhatsApp profile is registered and ready. Send SUBSCRIBE to activate paid services, or choose a service from MENU.")
+        await send_text(
+            phone,
+            "✅ Your portal details have been saved in Acadex. Your WhatsApp profile is registered and ready. Send SUBSCRIBE to activate paid services, or choose a service from MENU.",
+        )
         await show_menu(phone)
         return
 
-    if lower in {"9", "marketer", "marketer account", "marketer login", "marketer signup"}:
+    if lower in {
+        "9",
+        "marketer",
+        "marketer account",
+        "marketer login",
+        "marketer signup",
+    }:
         await state_set(phone, {"step": "marketer_choice"})
-        await send_list(phone, "Choose what you want to do.", [
-            {"title": "Sign up", "rowId": "1"},
-            {"title": "Log in", "rowId": "2"},
-        ], title="Marketer account")
+        await send_list(
+            phone,
+            "Choose what you want to do.",
+            [
+                {"title": "Sign up", "rowId": "1"},
+                {"title": "Log in", "rowId": "2"},
+            ],
+            title="Marketer account",
+        )
         return
 
     if lower == "refresh":
         marketer_state = await state_get(phone)
         marketer_username = marketer_state.get("authenticated_marketer")
         if marketer_username:
-            marketer = await payment_service.get_marketer_by_username(username=marketer_username)
+            marketer = await payment_service.get_marketer_by_username(
+                username=marketer_username
+            )
             if marketer:
                 await show_marketer_dashboard(phone, marketer)
                 return
 
     marketer_state = await state_get(phone)
     marketer_username = marketer_state.get("authenticated_marketer")
-    if lower in {"withdraw", "withdraw money", "request withdrawal"} and marketer_username:
-        marketer = await payment_service.get_marketer_by_username(username=marketer_username)
+    if (
+        lower in {"withdraw", "withdraw money", "request withdrawal"}
+        and marketer_username
+    ):
+        marketer = await payment_service.get_marketer_by_username(
+            username=marketer_username
+        )
         if not marketer:
             await state_clear(phone)
-            await send_text(phone, "I couldn't find your marketer account. Please log in again.")
+            await send_text(
+                phone, "I couldn't find your marketer account. Please log in again."
+            )
             return
-        referred = await payment_service.get_users_referred_by_marketer(marketer_username=marketer.username)
+        referred = await payment_service.get_users_referred_by_marketer(
+            marketer_username=marketer.username
+        )
         paid_users = referred.get("paid_users", 0)
         available = (1000 * paid_users * 0.2) - (marketer.amount_paid or 0)
         if available < 1000:
-            await send_text(phone, "You need at least ₦1,000 in available earnings (normally 5 or more paid referrals) before requesting a withdrawal.")
+            await send_text(
+                phone,
+                "You need at least ₦1,000 in available earnings (normally 5 or more paid referrals) before requesting a withdrawal.",
+            )
             return
-        await state_set(phone, {
-            "authenticated_marketer": marketer.username,
-            "withdraw_amount": round(available, 2),
-            "withdraw_step": "account_number",
-        })
-        await send_text(phone, f"You can request ₦{available:,.2f}. Enter your bank account number. Send CANCEL to stop.")
+        await state_set(
+            phone,
+            {
+                "authenticated_marketer": marketer.username,
+                "withdraw_amount": round(available, 2),
+                "withdraw_step": "account_number",
+            },
+        )
+        await send_text(
+            phone,
+            f"You can request ₦{available:,.2f}. Enter your bank account number. Send CANCEL to stop.",
+        )
         return
 
     if marketer_state.get("withdraw_step"):
         withdraw_step = marketer_state["withdraw_step"]
         if lower in {"cancel", "stop", "back"}:
-            await state_set(phone, {"authenticated_marketer": marketer_state.get("authenticated_marketer")})
-            await send_text(phone, "Withdrawal request cancelled. Send WITHDRAW whenever you're ready.")
+            await state_set(
+                phone,
+                {
+                    "authenticated_marketer": marketer_state.get(
+                        "authenticated_marketer"
+                    )
+                },
+            )
+            await send_text(
+                phone,
+                "Withdrawal request cancelled. Send WITHDRAW whenever you're ready.",
+            )
             return
         if withdraw_step == "account_number":
             account_number = "".join(ch for ch in clean if ch.isdigit())
             if len(account_number) < 10 or len(account_number) > 12:
                 await send_text(phone, "Enter a valid bank account number (10 digits).")
                 return
-            marketer_state.update({"account_number": account_number, "withdraw_step": "bank"})
+            marketer_state.update(
+                {"account_number": account_number, "withdraw_step": "bank"}
+            )
             await state_set(phone, marketer_state)
             await send_text(phone, "Enter the name of your bank.")
             return
@@ -785,28 +1074,40 @@ async def process_incoming(phone: str, text: str):
                 f"Account number: {marketer_state['account_number']}\n"
                 f"Bank: {marketer_state['bank']}\n"
                 f"Account name: {marketer_state['account_name']}\n\n"
-                "Reply CONFIRM to submit or CANCEL to stop."
+                "Reply CONFIRM to submit or CANCEL to stop.",
             )
             return
         if withdraw_step == "confirm":
             if lower not in {"confirm", "yes", "1"}:
-                await send_text(phone, "Reply CONFIRM to submit the request or CANCEL to stop.")
+                await send_text(
+                    phone, "Reply CONFIRM to submit the request or CANCEL to stop."
+                )
                 return
             marketer = await payment_service.get_marketer_by_username(
                 username=marketer_state.get("authenticated_marketer")
             )
             if not marketer or marketer.barred:
                 await state_clear(phone)
-                await send_text(phone, "Your marketer account could not be verified. Please contact Acadex support.")
+                await send_text(
+                    phone,
+                    "Your marketer account could not be verified. Please contact Acadex support.",
+                )
                 return
             amount = float(marketer_state["withdraw_amount"])
             # Recalculate immediately before submission so stale dashboard figures
             # cannot be used to request more than the current available earnings.
-            referred = await payment_service.get_users_referred_by_marketer(marketer_username=marketer.username)
-            current_available = (1000 * referred.get("paid_users", 0) * 0.2) - (marketer.amount_paid or 0)
+            referred = await payment_service.get_users_referred_by_marketer(
+                marketer_username=marketer.username
+            )
+            current_available = (1000 * referred.get("paid_users", 0) * 0.2) - (
+                marketer.amount_paid or 0
+            )
             if current_available < 1000 or amount > current_available:
                 await show_marketer_dashboard(phone, marketer)
-                await send_text(phone, "Your available balance changed. Please review the updated dashboard before requesting another withdrawal.")
+                await send_text(
+                    phone,
+                    "Your available balance changed. Please review the updated dashboard before requesting another withdrawal.",
+                )
                 return
             admin_phone = "2347025614656"
             admin_message = (
@@ -823,29 +1124,63 @@ async def process_incoming(phone: str, text: str):
             try:
                 await send_text(admin_phone, admin_message)
             except Exception:
-                log.exception("Could not send WhatsApp withdrawal notification for marketer %s", marketer.username)
-                await send_text(phone, "I couldn't deliver your withdrawal request to Acadex right now. Your balance has not been updated. Please try again later.")
+                log.exception(
+                    "Could not send WhatsApp withdrawal notification for marketer %s",
+                    marketer.username,
+                )
+                await send_text(
+                    phone,
+                    "I couldn't deliver your withdrawal request to Acadex right now. Your balance has not been updated. Please try again later.",
+                )
                 return
             updated = await update_marketer_withdrawn_amount(
                 marketer_username=marketer.username,
                 amount=amount,
             )
             if not updated:
-                log.error("Admin received withdrawal request but marketer amount_paid update failed: %s", marketer.username)
-                await send_text(phone, "Your request was sent to Acadex, but your dashboard balance could not be updated automatically. Please contact support and quote your username: " + marketer.username)
+                log.error(
+                    "Admin received withdrawal request but marketer amount_paid update failed: %s",
+                    marketer.username,
+                )
+                await send_text(
+                    phone,
+                    "Your request was sent to Acadex, but your dashboard balance could not be updated automatically. Please contact support and quote your username: "
+                    + marketer.username,
+                )
                 await state_set(phone, {"authenticated_marketer": marketer.username})
                 return
             await state_set(phone, {"authenticated_marketer": marketer.username})
-            await send_text(phone, "✅ Your withdrawal request has been sent to Acadex. Your bank details and account ID have been delivered to the admin WhatsApp number. Please allow up to 24 hours for processing.")
-            await show_marketer_dashboard(phone, await payment_service.get_marketer_by_username(username=marketer.username))
+            await send_text(
+                phone,
+                "✅ Your withdrawal request has been sent to Acadex. Your bank details and account ID have been delivered to the admin WhatsApp number. Please allow up to 24 hours for processing.",
+            )
+            await show_marketer_dashboard(
+                phone,
+                await payment_service.get_marketer_by_username(
+                    username=marketer.username
+                ),
+            )
             return
 
     if lower in {"1", "login", "connect account", "connect portal account"}:
         await state_set(phone, {"step": "university"})
-        await send_list(phone, "Which university do you attend?", [
-            {"title": "Federal University Otuoke", "rowId": "FUO", "description": "FUO"},
-            {"title": "Rivers State University", "rowId": "RSU", "description": "RSU"},
-        ], title="Choose your university")
+        await send_list(
+            phone,
+            "Which university do you attend?",
+            [
+                {
+                    "title": "Federal University Otuoke",
+                    "rowId": "FUO",
+                    "description": "FUO",
+                },
+                {
+                    "title": "Rivers State University",
+                    "rowId": "RSU",
+                    "description": "RSU",
+                },
+            ],
+            title="Choose your university",
+        )
         return
 
     service = SERVICE_MAP.get(lower)
@@ -856,9 +1191,11 @@ async def process_incoming(phone: str, text: str):
 
     await show_menu(phone, "I couldn't match that to an Acadex option.")
 
+
 @router.get("/whatsapp/health")
 async def health():
     return {"status": "ok", "service": "acadex-whatsapp-bridge"}
+
 
 @router.post("/whatsapp/incoming")
 async def incoming(payload: Incoming, authorization: str | None = Header(default=None)):
@@ -881,7 +1218,10 @@ async def incoming(payload: Incoming, authorization: str | None = Header(default
             await red.delete(seen_key)
         log.exception("Could not process WhatsApp message from %s", phone)
         try:
-            await send_text(phone, "Acadex encountered an unexpected error. Please send MENU and try again.")
+            await send_text(
+                phone,
+                "Acadex encountered an unexpected error. Please send MENU and try again.",
+            )
         except Exception:
             pass
         raise HTTPException(status_code=500, detail="Message processing failed")
