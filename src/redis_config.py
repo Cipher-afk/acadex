@@ -2,6 +2,7 @@ from redis.asyncio import Redis
 import asyncio
 from config import settings
 from datetime import timedelta
+from utils import encrypt_portal_password, decrypt_portal_password
 
 REDIS_PASSWORD = settings.REDIS_PASSWORD
 REDIS_PORT = settings.REDIS_PORT
@@ -22,15 +23,28 @@ async def get_url():
     return session_url
 
 
-async def save_userinfo(telegram_username: str, username, password, level,university,referrer):
+async def save_userinfo(
+    telegram_username: str, username, password, level, university, referrer
+):
+    encrypted_password = await encrypt_portal_password(password=password)
     await red.hset(
         telegram_username,
-        mapping={f"username": username, f"password": password, "level": level,"university":university,"referrer":referrer}
+        mapping={
+            f"username": username,
+            f"password": encrypted_password,
+            "level": level,
+            "university": university,
+            "referrer": referrer,
+        },
     )
 
 
 async def get_userinfo(telegram_username: str):
     user_info = await red.hgetall(telegram_username)
+    encrypted_password = user_info["password"]
+    user_info["password"] = await decrypt_portal_password(
+        encrypted_password=encrypted_password
+    )
     return user_info
 
 
