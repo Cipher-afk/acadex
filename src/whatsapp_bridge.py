@@ -428,7 +428,7 @@ async def launch_scraper(phone: str, action: str):
         # Concurrency limits, queueing and per-job file isolation live in scraper_file.main.
         university = data.get("university", "")
         if university == "FUO":
-            await safe_send_text(
+            await safe_send_text(phone,
                 "Acadex has been paused in this university due to review from the univeristy bodies\nWe're very sorry for the incovenience 😞💔"
             )
             return
