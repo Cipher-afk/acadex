@@ -13,3 +13,4 @@ uvicorn
 asyncpg
 alembic
 argon2-cffi
+cryptography
