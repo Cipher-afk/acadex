@@ -15,6 +15,9 @@ services: #Create the services you want to run together
       context: .
       dockerfile: ./payment_api/Dockerfile #Build the docker file from the path
     restart: unless-stopped
+    init: true # reaps Chromium child processes so they don't pile up as zombies
+    shm_size: "1gb" # Chromium needs real shared memory or pages crash
+    mem_limit: 2g
     ports: #Display the ports
       - "8000:8000"
     depends_on:
@@ -25,6 +28,9 @@ services: #Create the services you want to run together
   bot:
     build: ./
     restart: unless-stopped
+    init: true
+    shm_size: "1gb"
+    mem_limit: 2g
     depends_on: #This means the api has torun first before the bot
       - backend
       - db

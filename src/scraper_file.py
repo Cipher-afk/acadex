@@ -4,6 +4,7 @@ from playwright.async_api import (
     Locator,
     TimeoutError,
     Page,
+    Error as PlaywrightError,
 )
 import asyncio
 import builtins
@@ -1000,7 +1001,9 @@ SCRAPE_JOB_TIMEOUT = int(os.getenv("SCRAPE_JOB_TIMEOUT", "1800"))
 BROWSER_RECYCLE_AFTER = int(os.getenv("BROWSER_RECYCLE_AFTER", "50"))
 
 _LAUNCH_ARGS = ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-if os.getenv("CHROMIUM_SINGLE_PROCESS", "1") != "0":
+# --single-process makes one crashed page take down the whole shared browser (and every
+# other job using it), so it is OFF unless you explicitly set CHROMIUM_SINGLE_PROCESS=1.
+if os.getenv("CHROMIUM_SINGLE_PROCESS", "0") == "1":
     _LAUNCH_ARGS += ["--single-process", "--no-zygote"]
 
 _scrape_slots = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
@@ -1067,6 +1070,70 @@ async def _recycle_browser_if_due():
             except Exception:
                 pass
             _browser = None
+
+
+async def warm_browser():
+    """Launch the shared Chromium at startup so the first user doesn't pay for (or hit a
+    failure during) a cold launch. Never raises: if it fails, the first job retries."""
+    try:
+        await _get_browser()
+        print("Chromium warmed up")
+    except Exception as e:
+        print(f"Chromium warm-up failed (will retry on first job): {e!r}")
+
+
+async def shutdown_browser():
+    global _pw, _browser
+    async with _browser_lock:
+        try:
+            if _browser is not None:
+                await _browser.close()
+        except Exception:
+            pass
+        try:
+            if _pw is not None:
+                await _pw.stop()
+        except Exception:
+            pass
+        _browser = None
+        _pw = None
+
+
+async def _open_page(job):
+    """Open this job's isolated context + first page. If the shared browser turns out to
+    be dead (crashed between jobs or between the liveness check and now), force a fresh
+    launch and try once more instead of failing the user's request."""
+    global _browser
+    last_error = None
+    for attempt in (1, 2, 3):
+        context = None
+        try:
+            browser = await _get_browser()
+            context = await browser.new_context()
+            job.context = context  # closed for us on every exit path
+            page = await context.new_page()
+            return context, page
+        except PlaywrightError as e:
+            last_error = e
+            print(f"Opening page failed (attempt {attempt}): {e!r}")
+            if context is not None:
+                try:
+                    await context.close()
+                except Exception:
+                    pass
+            job.context = None
+            # Only discard the shared browser if it is really dead; otherwise a transient
+            # error here would kill another user's in-flight scrape.
+            dead = "closed" in str(e).lower()
+            async with _browser_lock:
+                if _browser is not None and (dead or not _browser.is_connected()):
+                    try:
+                        await _browser.close()
+                    except Exception:
+                        pass
+                    _browser = None
+            await asyncio.sleep(1.5 * attempt)
+    raise last_error
 
 
 @asynccontextmanager
@@ -1144,10 +1211,7 @@ async def main(
             return
         await message.answer("Scrape started")
         await message.answer("Loading...")
-        browser = await _get_browser()
-        context = await browser.new_context()
-        job.context = context  # closed for us on every exit path
-        page = await context.new_page()
+        context, page = await _open_page(job)
         if await get_url() == "":
             print("None")
             session_url = await get_url()
@@ -1235,7 +1299,6 @@ async def main(
                 return
             finally:
                 scraping_tasks.pop(message.chat.id, None)
-        await asyncio.sleep(10)
         print("Browser closing")
         await context.close()
 

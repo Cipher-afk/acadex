@@ -7,7 +7,7 @@ from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
 from utils import hash_password, verify_password, ask_for_wait
 from redis_config import save_userinfo, get_userinfo, get_payment, save_payment
-from scraper_file import main as scraper_main
+from scraper_file import main as scraper_main, warm_browser, shutdown_browser
 import asyncio
 import httpx
 import asyncio
@@ -1010,7 +1010,11 @@ async def handle_photo(message: Message):
 async def main():
     dp.include_router(router=stop_router)
     dp.include_router(router=router)
-    await dp.start_polling(bot)
+    await warm_browser()
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await shutdown_browser()
 
 
 if __name__ == "__main__":
